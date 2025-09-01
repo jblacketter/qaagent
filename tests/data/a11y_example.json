@@ -1,0 +1,11 @@
+{
+  "testUrl": "https://example.com/",
+  "violations": [
+    {"id": "color-contrast", "impact": "serious", "help": "Elements must have sufficient color contrast", "nodes": [{"target": ["#id"]}]},
+    {"id": "image-alt", "impact": "moderate", "help": "Images must have alternate text", "nodes": [{"target": ["img"]}]}
+  ],
+  "passes": [],
+  "incomplete": [],
+  "inapplicable": []
+}
+
