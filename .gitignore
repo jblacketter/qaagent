@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.env
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# Reports & Artifacts
+reports/
+artifacts/
+playwright-report/
+test-results/
+coverage/
+htmlcov/
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+
+# Node (if any)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
