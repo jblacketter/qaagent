@@ -1,0 +1,8 @@
+# UI Testing Dependencies (Playwright)
+# Install with: pip install -r requirements-ui.txt
+# Or: pip install -e .[ui]
+# Then: playwright install
+
+playwright
+pytest-playwright>=0.5
+pytest-html>=4.1

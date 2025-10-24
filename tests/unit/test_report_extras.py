@@ -13,11 +13,11 @@ def test_analyze_extras_parses_a11y_lighthouse_perf_and_api(tmp_path: Path, monk
     root = Path.cwd()
     artifacts = {
         "json": [
-            str(root / "tests/data/a11y_example.json"),
-            str(root / "tests/data/lighthouse_sample.json"),
+            str(root / "tests/fixtures/data/a11y_example.json"),
+            str(root / "tests/fixtures/data/lighthouse_sample.json"),
         ],
-        "csv": [str(root / "tests/data/perf_stats.csv")],
-        "junit": [str(root / "tests/data/junit_schemathesis.xml")],
+        "csv": [str(root / "tests/fixtures/data/perf_stats.csv")],
+        "junit": [str(root / "tests/fixtures/data/junit_schemathesis.xml")],
         "html_reports": [],
         "videos": [],
         "traces": [],
@@ -28,5 +28,5 @@ def test_analyze_extras_parses_a11y_lighthouse_perf_and_api(tmp_path: Path, monk
     assert "a11y" in extras and extras["a11y"]["violations"] >= 1
     assert "lighthouse" in extras and "scores" in extras["lighthouse"]
     assert "perf" in extras and "requests" in extras["perf"]
-    # API coverage should be computed since tests/data/openapi.yaml exists and junit references GET /users
+    # API coverage should be computed since tests/fixtures/data/openapi.yaml exists and junit references GET /users
     assert "api_coverage" in extras and extras["api_coverage"]["total"] >= 1

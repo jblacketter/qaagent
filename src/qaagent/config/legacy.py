@@ -38,15 +38,15 @@ class APIConfig:
 
 
 @dataclass
-class QAAgentConfig:
+class LegacyQAAgentConfig:
     api: APIConfig = field(default_factory=APIConfig)
 
     @staticmethod
-    def default() -> "QAAgentConfig":
-        return QAAgentConfig()
+    def default() -> "LegacyQAAgentConfig":
+        return LegacyQAAgentConfig()
 
 
-def load_config(path: Optional[str | Path] = None) -> Optional[QAAgentConfig]:
+def load_config(path: Optional[str | Path] = None) -> Optional[LegacyQAAgentConfig]:
     import sys
 
     data: dict | None = None
@@ -78,7 +78,7 @@ def load_config(path: Optional[str | Path] = None) -> Optional[QAAgentConfig]:
     except Exception:
         return None
 
-    cfg = QAAgentConfig.default()
+    cfg = LegacyQAAgentConfig.default()
     api = data.get("api", {}) if isinstance(data, dict) else {}
     if isinstance(api, dict):
         cfg.api.openapi = api.get("openapi")
@@ -129,4 +129,3 @@ def write_env_example(path: str | Path = ".env.example") -> Path:
     )
     p.write_text(content, encoding="utf-8")
     return p
-

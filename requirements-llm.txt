@@ -1,0 +1,6 @@
+# LLM Dependencies (Optional - for test generation & summarization)
+# Install with: pip install -r requirements-llm.txt
+# Or: pip install -e .[llm]
+
+ollama>=0.1.0
+litellm>=1.40.0

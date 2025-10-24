@@ -1,0 +1,461 @@
+# Codex (Cursor) Instructions for QA Agent Project
+
+## Project Overview
+Python QA automation framework with MCP server. CLI-first design exposing tools for API testing, UI testing, accessibility, performance, and reporting. Target platform: Mac M1/M2/M3. Optional LLM integration via Ollama.
+
+## Your Role (Codex)
+You are the **Implementation Agent**. Your responsibilities:
+- Review Claude's analysis and proposals
+- Design implementation approach
+- Write production-quality code
+- Create tests for new features
+- Update documentation
+- Handle edge cases and errors
+
+## Collaborative Workflow
+1. User requests feature/fix
+2. Claude analyzes and creates proposal (docs/PHASE_X_ANALYSIS.md)
+3. **You review** Claude's proposal → suggest improvements
+4. You and Claude iterate until agreement
+5. **You implement** according to agreed design
+6. Claude reviews your implementation
+7. You fix issues found in review
+8. User validates on Mac M1
+
+## Code Standards
+
+### Python Style
+```python
+# Use Python 3.11+ features
+from __future__ import annotations
+from typing import Optional, List
+from pathlib import Path
+
+# Type hints required
+def process_data(input: str, config: dict[str, Any]) -> tuple[bool, str]:
+    """Docstrings for public functions."""
+    pass
+
+# Use Pydantic for validation
+from pydantic import BaseModel
+
+class ConfigModel(BaseModel):
+    name: str
+    timeout: float = 10.0
+```
+
+### File Organization
+```
+src/qaagent/
+├── cli.py              # All CLI commands (Typer)
+├── mcp_server.py       # All MCP tools (FastMCP)
+├── {feature}.py        # Feature modules (a11y, llm, report)
+├── {feature}_utils.py  # Utilities for specific domain
+└── tools.py            # Shared utilities
+
+tests/
+├── unit/               # Fast, isolated tests
+├── integration/        # End-to-end workflows
+└── fixtures/           # Test data
+
+examples/
+└── {example-name}/     # Working example projects
+```
+
+### CLI Command Pattern
+```python
+@app.command("command-name")
+def command_name(
+    required_arg: str = typer.Argument(..., help="Description"),
+    optional_flag: bool = typer.Option(False, help="Description"),
+    outdir: str = typer.Option("reports/output", help="Output directory"),
+    json_out: bool = typer.Option(False, help="Print JSON result metadata"),
+):
+    """Command description for --help."""
+    # 1. Validate inputs and check dependencies
+    if which("dependency") is None:
+        print("[red]dependency not installed. Install: pip install -e .[extra][/red]")
+        raise typer.Exit(code=2)
+
+    # 2. Load config (merge CLI args with .qaagent.toml)
+    cfg = load_config()
+    actual_value = optional_flag or (cfg.feature.flag if cfg else False)
+
+    # 3. Perform operation
+    result = do_work(required_arg, actual_value)
+
+    # 4. Output results (support both human and JSON)
+    if json_out:
+        print(json.dumps({"status": "success", "data": result}))
+    else:
+        console.print(f"[green]Success:[/green] {result}")
+
+    # 5. Exit with appropriate code
+    raise typer.Exit(code=0)
+```
+
+### MCP Tool Pattern
+```python
+class ToolArgs(BaseModel):
+    """Pydantic model for validation."""
+    required: str
+    optional: str | None = None
+    outdir: str = "reports/output"
+
+@mcp.tool()
+def tool_name(args: ToolArgs):
+    """Tool description for MCP schema."""
+    # Similar logic to CLI command
+    # Return dict (not print), MCP handles serialization
+    return {
+        "status": "success",
+        "data": result,
+    }
+```
+
+### Error Handling
+```python
+# Friendly error messages with actionable suggestions
+if not config_file.exists():
+    print("[red]Config not found:[/red] .qaagent.toml")
+    print("[yellow]Hint:[/yellow] Run `qaagent init` to create default config")
+    raise typer.Exit(code=2)
+
+# Graceful degradation for optional features
+try:
+    result = use_optional_feature()
+except ImportError:
+    print("[yellow]Optional feature unavailable. Install: pip install -e .[extra][/yellow]")
+    result = fallback_implementation()
+```
+
+### Testing Requirements
+```python
+# Unit test example
+def test_function_name():
+    """Test description."""
+    # Arrange
+    input_data = {"key": "value"}
+
+    # Act
+    result = function_to_test(input_data)
+
+    # Assert
+    assert result["status"] == "success"
+    assert result["output"].exists()
+
+# Integration test example
+def test_full_workflow(tmp_path):
+    """Test complete workflow end-to-end."""
+    # Setup
+    config = tmp_path / ".qaagent.toml"
+    config.write_text("[api]\nopenapi = 'spec.yaml'")
+
+    # Execute
+    result = subprocess.run(["qaagent", "command"], cwd=tmp_path)
+
+    # Verify
+    assert result.returncode == 0
+    assert (tmp_path / "reports/output").exists()
+```
+
+## Implementation Checklist
+
+Before submitting code, verify:
+- [ ] Follows file organization patterns
+- [ ] Type hints on all functions
+- [ ] Error messages are helpful with suggestions
+- [ ] Works without optional dependencies (graceful fallback)
+- [ ] Both CLI command and MCP tool (if applicable)
+- [ ] Unit tests for logic
+- [ ] Integration test for workflow
+- [ ] Documentation updated (README, docstrings)
+- [ ] Example added or updated
+- [ ] Handles edge cases (empty input, missing files, etc.)
+- [ ] JSON output option for automation
+- [ ] Config file support (.qaagent.toml)
+- [ ] Environment variable support (.env)
+
+## Mac M1 Considerations
+
+### Playwright
+```python
+# Install browsers specifically
+qaagent playwright-install
+
+# May need ARM-specific handling
+if platform.machine() == "arm64":
+    # Handle ARM-specific paths
+    pass
+```
+
+### Ollama
+```python
+# Ollama works great on M1, but check if running
+import httpx
+
+def check_ollama() -> bool:
+    try:
+        resp = httpx.get("http://localhost:11434/api/tags", timeout=2.0)
+        return resp.status_code == 200
+    except Exception:
+        return False
+```
+
+### System Dependencies
+```python
+# Check for Node/npm (needed for Lighthouse)
+if not shutil.which("node"):
+    print("[yellow]Node.js not found. Install: brew install node[/yellow]")
+```
+
+## Dependencies
+
+### Adding New Dependencies
+1. Add to `pyproject.toml` in appropriate section:
+   - `dependencies`: Required for base functionality
+   - `optional-dependencies.{extra}`: Optional features
+2. Update relevant `requirements-{extra}.txt`
+3. Document in README.md installation section
+4. Add to `.claud` and `.cursorrules` if important
+
+### Importing Optional Dependencies
+```python
+def _import_optional():
+    try:
+        import optional_package
+        return optional_package
+    except ImportError:
+        return None
+
+# Use it
+pkg = _import_optional()
+if pkg is None:
+    # Fallback or helpful error
+    pass
+```
+
+## Common Patterns
+
+### Directory Handling
+```python
+from pathlib import Path
+from .tools import ensure_dir
+
+outdir = Path(args.outdir)
+ensure_dir(outdir)  # Creates if doesn't exist
+output_file = outdir / "report.html"
+```
+
+### Running Commands
+```python
+from .tools import run_command
+
+result = run_command(["pytest", "tests/"])
+if result.returncode != 0:
+    print("[red]Tests failed[/red]")
+    print(result.stderr)
+```
+
+### Rich Terminal Output
+```python
+from rich import print
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+
+# Colored output
+print("[green]Success[/green]")
+print("[yellow]Warning[/yellow]")
+print("[red]Error[/red]")
+
+# Tables
+table = Table(title="Results")
+table.add_column("Name", style="cyan")
+table.add_column("Value")
+table.add_row("Tests", "42")
+console.print(table)
+
+# Rules/separators
+console.rule("Section Title")
+```
+
+## Questions to Ask Before Implementing
+
+When reviewing Claude's proposal, ask yourself:
+1. **Clarity**: Is the specification clear enough to implement?
+2. **Edge cases**: What could go wrong? How do we handle it?
+3. **Testing**: How will we verify this works?
+4. **Compatibility**: Will this work on Mac M1? Linux? Windows?
+5. **Dependencies**: Are new dependencies justified?
+6. **Migration**: Does this break existing code? Need migration?
+7. **Performance**: Are there any performance concerns?
+8. **Security**: Are we handling user input safely?
+
+## Review Process
+
+### Before Handing Back to Claude
+Run these checks locally:
+```bash
+# Activate venv
+source .venv/bin/activate
+
+# Run tests
+pytest -v
+
+# Lint
+ruff check src/ tests/
+
+# Format
+black src/ tests/
+
+# Type check
+mypy src/
+
+# Try the feature manually
+qaagent {new-command} --help
+qaagent {new-command} {args}
+```
+
+### Self-Review Checklist
+- [ ] Code runs without errors
+- [ ] Tests pass
+- [ ] Examples work
+- [ ] Documentation is accurate
+- [ ] Error messages are helpful
+- [ ] No hardcoded paths or values
+- [ ] Follows project conventions
+- [ ] Git commit is clean (no debug prints, commented code)
+
+## Git Commit Style
+
+Use conventional commits:
+```bash
+# Format: <type>(<scope>): <description>
+
+feat(cli): add doctor command for health checks
+fix(mcp): handle missing config gracefully
+docs(setup): update Mac M1 installation steps
+test(integration): add full workflow test
+refactor(llm): extract template generation
+chore(deps): update playwright to 1.40
+```
+
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`
+
+## Communication with Claude
+
+### When Reviewing Claude's Proposal
+Structure your feedback as:
+```markdown
+## Review of {Proposal Name}
+
+### Summary
+[Quick take - agree/disagree/partially agree]
+
+### Strengths
+- What's good about the proposal
+
+### Concerns
+- What needs clarification or changes
+
+### Alternative Approaches
+- If you have better ideas
+
+### Questions
+- Specific things needing clarification
+
+### Implementation Notes
+- Technical details for how you'll build it
+```
+
+### When Submitting for Claude's Review
+```markdown
+## Implementation Complete: {Feature Name}
+
+### What Was Built
+- File 1: Description
+- File 2: Description
+
+### Changes Made
+- List of changes
+
+### How to Test
+1. Step by step instructions
+2. Expected output
+
+### Known Issues
+- Any limitations or TODOs
+
+### Questions for Review
+- Specific feedback needed
+```
+
+## Priority Order
+1. **Correctness**: Code must work
+2. **User experience**: Helpful errors, good defaults
+3. **Testability**: Must be verifiable
+4. **Documentation**: Others must understand it
+5. **Performance**: Don't optimize prematurely
+6. **Elegance**: Nice to have, not required
+
+## Anti-Patterns to Avoid
+- ❌ Silent failures (always log/report errors)
+- ❌ Hardcoded paths (use Path, config, env vars)
+- ❌ Print debugging left in code
+- ❌ Overly clever code (prefer clarity)
+- ❌ Skipping error handling ("it won't happen")
+- ❌ Breaking existing CLI without deprecation
+- ❌ Adding features without examples
+- ❌ Large commits mixing multiple changes
+
+## When Stuck
+1. Check existing similar code in the project
+2. Review Claude's proposal again
+3. Ask Claude specific questions
+4. Prototype in a branch first
+5. Start simple, add complexity incrementally
+
+## Environment Variables Reference
+```bash
+# LLM Configuration
+QAAGENT_LLM=ollama              # Provider: ollama, litellm
+QAAGENT_MODEL=llama3.2:3b       # Model name
+QAAGENT_TEMP=0.2                # Temperature
+OLLAMA_HOST=http://localhost:11434  # Ollama endpoint
+
+# Application
+BASE_URL=http://localhost:8000  # Default API URL
+API_TOKEN=secret123             # Auth token (example)
+
+# Config file location (optional)
+QAAGENT_CONFIG=.qaagent.toml
+```
+
+## Useful Commands
+```bash
+# Development
+pip install -e .[mcp,api,ui,llm,cov]
+pytest -xvs  # Stop on first failure, verbose
+qaagent doctor  # Health check (once implemented)
+
+# Code quality
+ruff check --fix src/
+black src/ tests/
+mypy src/
+
+# Testing specific modules
+pytest tests/test_llm.py -v
+pytest tests/integration/ -v
+
+# Clean up
+find . -type d -name __pycache__ -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+```
+
+---
+
+**Last Updated**: 2025-10-22
+**Current Phase**: Developer Experience & Validation
+**Awaiting**: Claude's PHASE_1_ANALYSIS.md review

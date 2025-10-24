@@ -54,7 +54,7 @@ def run_axe(
                     }
                     res = page.evaluate("async (cfg) => await axe.run(document, cfg)", cfg)
                 else:
-                res = page.evaluate("async () => await axe.run(document)")
+                    res = page.evaluate("async () => await axe.run(document)")
 
                 # Ensure result tracks the tested URL for downstream reporting
                 try:

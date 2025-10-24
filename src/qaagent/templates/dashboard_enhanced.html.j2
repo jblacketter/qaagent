@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - QA Agent Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .meta {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.8;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .stat-card.critical { border-left-color: #e74c3c; }
+        .stat-card.high { border-left-color: #e67e22; }
+        .stat-card.medium { border-left-color: #f39c12; }
+        .stat-card.success { border-left-color: #27ae60; }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-card .description {
+            font-size: 0.85em;
+            color: #95a5a6;
+            margin-top: 8px;
+        }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .filter-input {
+            padding: 10px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            background: white;
+        }
+
+        .filter-button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .filter-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .filter-button.secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .filter-button.secondary:hover {
+            background: #bdc3c7;
+        }
+
+        /* Risk Cards */
+        .risks-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .risk-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #e74c3c;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .risk-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .risk-card.high { border-left-color: #e67e22; }
+        .risk-card.medium { border-left-color: #f39c12; }
+        .risk-card.low { border-left-color: #3498db; }
+
+        .risk-card h4 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .risk-card .risk-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge.critical { background: #e74c3c; color: white; }
+        .badge.high { background: #e67e22; color: white; }
+        .badge.medium { background: #f39c12; color: white; }
+        .badge.low { background: #3498db; color: white; }
+
+        .badge.category {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .modal-header h2 {
+            font-size: 1.8em;
+            color: #2c3e50;
+        }
+
+        .close {
+            font-size: 2em;
+            font-weight: bold;
+            cursor: pointer;
+            color: #95a5a6;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #2c3e50;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .modal-section p {
+            color: #2c3e50;
+            line-height: 1.8;
+        }
+
+        /* Route Table */
+        .route-table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .route-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .route-table th {
+            background: #ecf0f1;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #bdc3c7;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .route-table th:hover {
+            background: #d5dbdb;
+        }
+
+        .route-table th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+        }
+
+        .route-table th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .route-table th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        .route-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .route-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .method-badge.GET { background: #3498db; color: white; }
+        .method-badge.POST { background: #27ae60; color: white; }
+        .method-badge.PUT { background: #f39c12; color: white; }
+        .method-badge.PATCH { background: #9b59b6; color: white; }
+        .method-badge.DELETE { background: #e74c3c; color: white; }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }
+
+        .spinner {
+            border: 4px solid #ecf0f1;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="subtitle">Interactive QA Agent Analysis Dashboard</div>
+            <div class="meta">
+                Generated: {{ timestamp }} | Project: {{ project_name }} | Routes Analyzed: {{ strategy.total_routes }}
+            </div>
+        </div>
+
+        <!-- Executive Summary Stats -->
+        <div class="stats-grid">
+            <div class="stat-card" onclick="switchTab('overview')">
+                <div class="label">Total Routes</div>
+                <div class="value">{{ strategy.total_routes }}</div>
+                <div class="description">API endpoints discovered</div>
+            </div>
+
+            <div class="stat-card critical" onclick="filterBySeverity('critical')">
+                <div class="label">Critical Risks</div>
+                <div class="value">{{ risk_summary.critical }}</div>
+                <div class="description">Require immediate attention</div>
+            </div>
+
+            <div class="stat-card high" onclick="filterBySeverity('high')">
+                <div class="label">High Priority Risks</div>
+                <div class="value">{{ risk_summary.high }}</div>
+                <div class="description">Should be addressed soon</div>
+            </div>
+
+            <div class="stat-card medium" onclick="filterBySeverity('medium')">
+                <div class="label">Medium Risks</div>
+                <div class="value">{{ risk_summary.medium }}</div>
+                <div class="description">Plan for future sprints</div>
+            </div>
+
+            <div class="stat-card success" onclick="switchTab('tests')">
+                <div class="label">Tests Recommended</div>
+                <div class="value">{{ strategy.recommended_tests.unit }}</div>
+                <div class="description">Unit tests suggested</div>
+            </div>
+
+            <div class="stat-card" onclick="switchTab('routes')">
+                <div class="label">Authentication Required</div>
+                <div class="value">{{ strategy.routes_requiring_auth }}</div>
+                <div class="description">Secured endpoints</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('overview')">📊 Overview</div>
+            <div class="tab" onclick="switchTab('risks')">⚠️ Risks</div>
+            <div class="tab" onclick="switchTab('routes')">🔗 Routes</div>
+            <div class="tab" onclick="switchTab('tests')">🧪 Test Strategy</div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Risk Severity Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="riskSeverityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Risk Categories</h3>
+                    <div class="chart-container">
+                        <canvas id="riskCategoriesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>HTTP Methods Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="methodsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Authentication Coverage</h3>
+                    <div class="chart-container">
+                        <canvas id="authChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risks Tab -->
+        <div id="risks-tab" class="tab-content">
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Search:</label>
+                    <input type="text" id="riskSearch" class="filter-input" placeholder="Search risks...">
+
+                    <label>Severity:</label>
+                    <select id="severityFilter" class="filter-select">
+                        <option value="all">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+
+                    <label>Category:</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="all">All Categories</option>
+                        {% for category in risk_categories.keys() %}
+                        <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button class="filter-button secondary" onclick="clearRiskFilters()">Clear Filters</button>
+                </div>
+            </div>
+
+            <!-- Risks Container -->
+            <div class="risks-container" id="risksContainer">
+                {% for risk in risks %}
+                <div class="risk-card {{ risk.severity.value }}"
+                     data-severity="{{ risk.severity.value }}"
+                     data-category="{{ risk.category.value }}"
+                     data-route="{{ risk.route or '' }}"
+                     data-title="{{ risk.title }}"
+                     data-description="{{ risk.description }}"
+                     data-recommendation="{{ risk.recommendation }}"
+                     onclick="showRiskDetail(this)">
+                    <h4>{{ risk.title }}</h4>
+                    <div class="risk-meta">
+                        <span class="badge {{ risk.severity.value }}">{{ risk.severity.value.upper() }}</span>
+                        <span class="badge category">{{ risk.category.value }}</span>
+                        {% if risk.route %}<span style="color: #7f8c8d;">{{ risk.route }}</span>{% endif %}
+                    </div>
+                    <p>{{ risk.description[:150] }}{% if risk.description|length > 150 %}...{% endif %}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Routes Tab -->
+        <div id="routes-tab" class="tab-content">
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Search:</label>
+                    <input type="text" id="routeSearch" class="filter-input" placeholder="Search routes...">
+
+                    <label>Method:</label>
+                    <select id="methodFilter" class="filter-select">
+                        <option value="all">All Methods</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+
+                    <label>Auth:</label>
+                    <select id="authFilter" class="filter-select">
+                        <option value="all">All</option>
+                        <option value="true">Required</option>
+                        <option value="false">Not Required</option>
+                    </select>
+
+                    <button class="filter-button secondary" onclick="clearRouteFilters()">Clear Filters</button>
+                </div>
+            </div>
+
+            <!-- Routes Table -->
+            <div class="route-table-container">
+                <table class="route-table" id="routesTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0)">Method</th>
+                            <th class="sortable" onclick="sortTable(1)">Path</th>
+                            <th class="sortable" onclick="sortTable(2)">Auth Required</th>
+                            <th>Tags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in top_routes %}
+                        <tr data-method="{{ route.method }}" data-auth="{{ route.auth_required|lower }}">
+                            <td><span class="method-badge {{ route.method }}">{{ route.method }}</span></td>
+                            <td>{{ route.path }}</td>
+                            <td>{% if route.auth_required %}✓ Yes{% else %}✗ No{% endif %}</td>
+                            <td>{{ route.tags|join(', ') if route.tags else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tests Tab -->
+        <div id="tests-tab" class="tab-content">
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>📝 Test Coverage Recommendations</h3>
+                    <p style="margin-bottom: 20px; color: #7f8c8d;">Based on route analysis and risk assessment</p>
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 1.1em; color: #2c3e50; margin-bottom: 5px;">Unit Tests</div>
+                            <div style="font-size: 2.5em; font-weight: bold; color: #667eea;">{{ strategy.recommended_tests.unit }}</div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 1.1em; color: #2c3e50; margin-bottom: 5px;">Integration Tests</div>
+                            <div style="font-size: 2.5em; font-weight: bold; color: #667eea;">{{ strategy.recommended_tests.integration }}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.1em; color: #2c3e50; margin-bottom: 5px;">E2E Tests</div>
+                            <div style="font-size: 2.5em; font-weight: bold; color: #667eea;">{{ strategy.recommended_tests.e2e }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>🎯 Priority Focus Areas</h3>
+                    <ol style="padding-left: 20px;">
+                        {% for priority in strategy.priorities[:5] %}
+                        <li style="margin-bottom: 15px;">
+                            <strong>{{ priority.name }}</strong>
+                            <p style="color: #7f8c8d; margin-top: 5px;">{{ priority.reason }}</p>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Detail Modal -->
+    <div id="riskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle"></h2>
+                <span class="close" onclick="closeRiskModal()">&times;</span>
+            </div>
+            <div class="modal-section">
+                <h3>Severity & Category</h3>
+                <div id="modalMeta"></div>
+            </div>
+            <div class="modal-section">
+                <h3>Description</h3>
+                <p id="modalDescription"></p>
+            </div>
+            <div class="modal-section">
+                <h3>Recommendation</h3>
+                <p id="modalRecommendation"></p>
+            </div>
+            <div class="modal-section" id="modalRouteSection">
+                <h3>Affected Route</h3>
+                <p id="modalRoute"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard Data
+        const riskData = {
+            severity: {
+                labels: ['Critical', 'High', 'Medium', 'Low'],
+                data: [{{ risk_summary.critical }}, {{ risk_summary.high }}, {{ risk_summary.medium }}, {{ risk_summary.low }}],
+                colors: ['#e74c3c', '#e67e22', '#f39c12', '#3498db']
+            },
+            categories: {
+                labels: {{ risk_categories.keys()|list|tojson }},
+                data: {{ risk_categories.values()|list|tojson }}
+            }
+        };
+
+        // Calculate method distribution
+        const routes = {{ routes_dict|tojson }};
+        const methodCounts = routes.reduce((acc, route) => {
+            acc[route.method] = (acc[route.method] || 0) + 1;
+            return acc;
+        }, {});
+
+        const authCounts = {
+            required: routes.filter(r => r.auth_required).length,
+            notRequired: routes.filter(r => !r.auth_required).length
+        };
+
+        // Chart.js configurations
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        };
+
+        // Risk Severity Chart
+        new Chart(document.getElementById('riskSeverityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: riskData.severity.labels,
+                datasets: [{
+                    data: riskData.severity.data,
+                    backgroundColor: riskData.severity.colors
+                }]
+            },
+            options: {
+                ...chartOptions,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const severity = riskData.severity.labels[index].toLowerCase();
+                        filterBySeverity(severity);
+                    }
+                }
+            }
+        });
+
+        // Risk Categories Chart
+        new Chart(document.getElementById('riskCategoriesChart'), {
+            type: 'bar',
+            data: {
+                labels: riskData.categories.labels,
+                datasets: [{
+                    label: 'Risks by Category',
+                    data: riskData.categories.data,
+                    backgroundColor: '#667eea'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const category = riskData.categories.labels[index];
+                        filterByCategory(category);
+                    }
+                }
+            }
+        });
+
+        // HTTP Methods Chart
+        new Chart(document.getElementById('methodsChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(methodCounts),
+                datasets: [{
+                    label: 'Routes by Method',
+                    data: Object.values(methodCounts),
+                    backgroundColor: ['#3498db', '#27ae60', '#f39c12', '#9b59b6', '#e74c3c']
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Authentication Coverage Chart
+        new Chart(document.getElementById('authChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Auth Required', 'No Auth'],
+                datasets: [{
+                    data: [authCounts.required, authCounts.notRequired],
+                    backgroundColor: ['#27ae60', '#95a5a6']
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Risk Filtering
+        function filterBySeverity(severity) {
+            switchTab('risks');
+            document.getElementById('severityFilter').value = severity;
+            filterRisks();
+        }
+
+        function filterByCategory(category) {
+            switchTab('risks');
+            document.getElementById('categoryFilter').value = category;
+            filterRisks();
+        }
+
+        function filterRisks() {
+            const searchTerm = document.getElementById('riskSearch').value.toLowerCase();
+            const severity = document.getElementById('severityFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+
+            document.querySelectorAll('.risk-card').forEach(card => {
+                const cardSeverity = card.dataset.severity;
+                const cardCategory = card.dataset.category;
+                const cardTitle = card.dataset.title.toLowerCase();
+                const cardDescription = card.dataset.description.toLowerCase();
+
+                const matchesSearch = searchTerm === '' || cardTitle.includes(searchTerm) || cardDescription.includes(searchTerm);
+                const matchesSeverity = severity === 'all' || cardSeverity === severity;
+                const matchesCategory = category === 'all' || cardCategory === category;
+
+                if (matchesSearch && matchesSeverity && matchesCategory) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        function clearRiskFilters() {
+            document.getElementById('riskSearch').value = '';
+            document.getElementById('severityFilter').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            filterRisks();
+        }
+
+        // Route Filtering
+        function filterRoutes() {
+            const searchTerm = document.getElementById('routeSearch').value.toLowerCase();
+            const method = document.getElementById('methodFilter').value;
+            const auth = document.getElementById('authFilter').value;
+
+            document.querySelectorAll('#routesTable tbody tr').forEach(row => {
+                const rowMethod = row.dataset.method;
+                const rowAuth = row.dataset.auth;
+                const rowText = row.textContent.toLowerCase();
+
+                const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
+                const matchesMethod = method === 'all' || rowMethod === method;
+                const matchesAuth = auth === 'all' || rowAuth === auth;
+
+                if (matchesSearch && matchesMethod && matchesAuth) {
+                    row.classList.remove('hidden');
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+        }
+
+        function clearRouteFilters() {
+            document.getElementById('routeSearch').value = '';
+            document.getElementById('methodFilter').value = 'all';
+            document.getElementById('authFilter').value = 'all';
+            filterRoutes();
+        }
+
+        // Table Sorting
+        let sortDirection = {};
+        function sortTable(columnIndex) {
+            const table = document.getElementById('routesTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const header = table.querySelectorAll('th')[columnIndex];
+
+            // Toggle sort direction
+            const currentDir = sortDirection[columnIndex] || 'asc';
+            const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+            sortDirection[columnIndex] = newDir;
+
+            // Update header classes
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            header.classList.add(newDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+
+                if (newDir === 'asc') {
+                    return aText.localeCompare(bText);
+                } else {
+                    return bText.localeCompare(aText);
+                }
+            });
+
+            // Re-append rows
+            const tbody = table.querySelector('tbody');
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Risk Detail Modal
+        function showRiskDetail(card) {
+            const modal = document.getElementById('riskModal');
+            document.getElementById('modalTitle').textContent = card.dataset.title;
+            document.getElementById('modalDescription').textContent = card.dataset.description;
+            document.getElementById('modalRecommendation').textContent = card.dataset.recommendation;
+
+            const severity = card.dataset.severity;
+            const category = card.dataset.category;
+            document.getElementById('modalMeta').innerHTML = `
+                <span class="badge ${severity}">${severity.toUpperCase()}</span>
+                <span class="badge category">${category}</span>
+            `;
+
+            if (card.dataset.route) {
+                document.getElementById('modalRoute').textContent = card.dataset.route;
+                document.getElementById('modalRouteSection').style.display = 'block';
+            } else {
+                document.getElementById('modalRouteSection').style.display = 'none';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeRiskModal() {
+            document.getElementById('riskModal').classList.remove('active');
+        }
+
+        // Event Listeners
+        document.getElementById('riskSearch').addEventListener('input', filterRisks);
+        document.getElementById('severityFilter').addEventListener('change', filterRisks);
+        document.getElementById('categoryFilter').addEventListener('change', filterRisks);
+
+        document.getElementById('routeSearch').addEventListener('input', filterRoutes);
+        document.getElementById('methodFilter').addEventListener('change', filterRoutes);
+        document.getElementById('authFilter').addEventListener('change', filterRoutes);
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('riskModal');
+            if (event.target === modal) {
+                closeRiskModal();
+            }
+        };
+    </script>
+</body>
+</html>

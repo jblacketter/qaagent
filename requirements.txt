@@ -1,0 +1,18 @@
+# QA Agent - Base Requirements
+# Install with: pip install -r requirements.txt
+# For development: pip install -e .
+
+# Core dependencies (always required)
+typer>=0.12
+pydantic>=2.7
+rich>=13.7
+pytest>=7.4
+
+# Optional extras - install as needed:
+# pip install -r requirements-mcp.txt
+# pip install -r requirements-api.txt
+# pip install -r requirements-ui.txt
+# pip install -r requirements-llm.txt
+
+# Or install all extras at once:
+# pip install -e .[mcp,api,ui,report,config,llm,cov,perf]

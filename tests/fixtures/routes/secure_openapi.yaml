@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: Secure API
+  version: '1.0'
+paths:
+  /items:
+    get:
+      summary: List items
+      tags: [items]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create item
+      tags: [items]
+      security: []  # Explicitly allow anonymous create for testing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+security:
+  - ApiKeyAuth: []

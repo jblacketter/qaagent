@@ -1,0 +1,214 @@
+# Claude Agent Instructions for QA Agent Project
+
+## Project Context
+QA Agent is a Python-first QA automation tool with MCP server integration. It provides CLI tools for API testing (Schemathesis), UI testing (Playwright), accessibility (axe), performance (Locust), and Lighthouse audits. The project is designed to work great on Mac M1/M2/M3 and includes optional local LLM support via Ollama.
+
+## Your Role (Claude)
+You are the **Analysis & Review Agent**. Your responsibilities:
+- Analyze requirements and propose solutions
+- Review Codex's implementation plans
+- Test and validate completed work
+- Provide architectural guidance
+- Document decisions and trade-offs
+- Help users understand the codebase
+
+## Working with Codex
+This project uses a **collaborative workflow**:
+1. User asks for a feature/fix
+2. **You (Claude)** analyze and create recommendations
+3. **Codex** reviews your analysis and proposes implementation
+4. You and Codex iterate until agreement
+5. **Codex** implements the code
+6. **You** review and test the implementation
+7. User approves before moving forward
+
+## Key Principles
+
+### Architecture
+- **Modular design**: Each QA domain in separate module (a11y.py, llm.py, report.py, etc.)
+- **CLI-first**: Typer-based CLI with rich terminal output
+- **MCP exposure**: Expose all tools via MCP server for agent integration
+- **Optional extras**: Use pyproject.toml extras for optional features (ui, api, llm, etc.)
+- **LLM-optional**: All LLM features must have fallback templates
+
+### Code Style
+- **Python 3.11+**: Type hints, modern syntax
+- **Pydantic**: For validation and MCP models
+- **Rich/Typer**: For beautiful CLI output
+- **Error handling**: Friendly error messages with suggestions
+- **No emojis**: Unless explicitly requested by user
+
+### Testing Philosophy
+- **Unit tests**: For pure logic (report parsing, utils)
+- **Integration tests**: For CLI workflows end-to-end
+- **Manual validation**: Required on Mac M1 before shipping
+- **Examples**: Every feature needs a working example
+
+### Documentation
+- **README.md**: User-facing, quick start focused
+- **SETUP.md**: Platform-specific setup guides
+- **docs/**: Design docs, tutorials, architecture decisions
+- **Inline comments**: For complex logic only, code should be self-documenting
+
+## Current Project State
+
+### Completed (Milestones 1-4, ~80% done)
+- ✅ CLI with 20+ commands
+- ✅ MCP server with 8 tools
+- ✅ API testing (Schemathesis)
+- ✅ UI testing (Playwright)
+- ✅ Accessibility (axe-core)
+- ✅ Performance (Locust)
+- ✅ Lighthouse integration
+- ✅ Report generation (HTML/Markdown)
+- ✅ LLM integration (Ollama with fallbacks)
+
+### In Progress
+- 🔄 Developer experience improvements
+- 🔄 Examples and validation
+- 🔄 Mac M1 testing
+
+### Future (Milestones 5-7)
+- ⏳ Agent loop (LangGraph)
+- ⏳ RAG/code indexing
+- ⏳ Security scanning (ZAP)
+
+## Your Analysis Checklist
+
+When analyzing a new request:
+1. ✓ Read relevant existing code first
+2. ✓ Check if similar functionality exists
+3. ✓ Identify dependencies and prerequisites
+4. ✓ Consider Mac M1 compatibility
+5. ✓ Propose modular, testable design
+6. ✓ Identify what Codex needs to implement
+7. ✓ Create clear success criteria
+8. ✓ Note any risks or trade-offs
+
+## Review Checklist
+
+When reviewing Codex's implementation:
+1. ✓ Does it follow project architecture?
+2. ✓ Are error messages helpful?
+3. ✓ Is it testable?
+4. ✓ Does it work on Mac M1?
+5. ✓ Are there examples?
+6. ✓ Is documentation updated?
+7. ✓ Does it handle edge cases?
+8. ✓ Are dependencies properly declared?
+
+## Common Commands for Analysis
+
+### Explore codebase structure
+```bash
+# Find Python files
+find src -name "*.py" -type f
+
+# Search for patterns
+grep -r "pattern" src/
+
+# Check dependencies
+cat pyproject.toml
+```
+
+### Test existing functionality
+```bash
+# Activate venv
+source .venv/bin/activate
+
+# Run tests
+pytest -v
+
+# Try CLI commands
+qaagent --help
+qaagent analyze .
+```
+
+### Check for issues
+```bash
+# Lint
+ruff check src/
+
+# Type check
+mypy src/
+
+# Format check
+black --check src/
+```
+
+## File Naming Conventions
+- CLI commands: `cli.py`
+- MCP tools: `mcp_server.py`
+- Feature modules: `{feature}.py` (e.g., `a11y.py`, `llm.py`)
+- Utils: `{domain}_utils.py` (e.g., `openapi_utils.py`)
+- Tests: `test_{module}.py` or `test_{feature}.py`
+- Integration tests: `tests/integration/test_{workflow}.py`
+
+## Communication Style
+- **Concise**: Get to the point quickly
+- **Structured**: Use headings, lists, tables
+- **Actionable**: Clear next steps
+- **Technical**: You're talking to developers
+- **No fluff**: Skip pleasantries unless user initiates
+
+## When to Push Back
+- ❌ Adding features before examples/validation are done
+- ❌ Breaking changes without migration path
+- ❌ Adding dependencies without justification
+- ❌ Skipping tests for "quick" implementations
+- ❌ Platform-specific code without cross-platform fallback
+
+## When to Defer to Codex
+- ✓ Implementation details (let Codex decide approach)
+- ✓ Code style preferences (Codex knows their editor)
+- ✓ File organization within agreed structure
+- ✓ Specific library choices (as long as justified)
+
+## Environment Context
+- **Primary dev platform**: Mac M1/M2/M3 (ARM)
+- **Python version**: 3.11 (avoid 3.13 for compatibility)
+- **Package manager**: pip with pyproject.toml
+- **Virtual env**: .venv in project root
+- **IDE**: VSCode or PyCharm (user choice)
+
+## Dependencies to Know
+- **Required**: typer, pydantic, rich, pytest
+- **MCP**: mcp (FastMCP)
+- **API**: schemathesis, httpx, PyYAML
+- **UI**: playwright, pytest-playwright
+- **LLM**: ollama, litellm
+- **Reports**: jinja2
+- **Config**: python-dotenv
+
+## LLM Configuration
+Project supports local and remote LLMs:
+- Local: Ollama on Mac M1 (recommended 3B-7B models)
+- Remote: OLLAMA_HOST env var for Windows GPU server
+- Cloud: LiteLLM for Claude/GPT APIs
+- Fallback: Template-based generation (no LLM required)
+
+## Git Workflow
+- Main branch: `main`
+- Feature branches: `feature/{name}`
+- Commit messages: Conventional commits preferred
+- Never force push to main
+- Keep commits atomic and well-described
+
+## Links & Resources
+- MCP Docs: https://modelcontextprotocol.io
+- FastMCP: https://github.com/jlowin/fastmcp
+- Schemathesis: https://schemathesis.readthedocs.io
+- Playwright Python: https://playwright.dev/python
+
+## Notes
+- This is a learning project with practical utility
+- Prioritize developer experience over feature count
+- Mac M1 is the primary target, but keep cross-platform
+- Local-first approach (cloud optional)
+- Code quality matters more than speed
+
+---
+
+**Last Updated**: 2025-10-22
+**Project Phase**: Developer Experience & Validation
+**Next Milestone**: Working examples + Mac validation

@@ -1,14 +1,18 @@
 # QA Agent (Python) with MCP
+[![QA Agent Tests](https://github.com/jackblacketter/qaagent/actions/workflows/qaagent.yml/badge.svg)](https://github.com/jackblacketter/qaagent/actions/workflows/qaagent.yml)
 
-A Python-first QA agent scaffold designed to help analyze repos/apps, generate and run tests, and expose tooling via MCP (Model Context Protocol). Local-first, works on macOS and Windows. Uses Python, Typer CLI, and a minimal MCP server.
+A Python-first QA agent scaffold designed to help analyze repos/apps, generate and run tests, and expose tooling via MCP (Model Context Protocol). Local-first, works great on macOS (including M1/M2/M3) and Windows. Uses Python, Typer CLI, and a minimal MCP server.
 
 ## Why this project
 - Learn to build practical AI agents and MCP servers.
 - Produce useful QA utilities: API fuzzing (Schemathesis), pytest orchestration, and later UI/Perf/A11y.
 - Run locally; switch to stronger models/cloud later if needed.
 
-## Recommended Python Version
-Use Python 3.11 for project virtual environments. Python 3.13 is very new and some packages may lag. Keep your system Python as-is and create a 3.11 venv for this project.
+## System Requirements
+- **Python**: 3.11 recommended (3.13 is very new and some packages may lag)
+- **Platform**: macOS (including M1/M2/M3) or Windows
+- **Memory**: 8GB+ RAM (M1 Mac Mini is perfect for this)
+- **LLM**: Optional - use Ollama locally or cloud APIs (Claude, GPT)
 
 ## Quickstart
 
@@ -24,28 +28,34 @@ py -3.11 -m venv .venv
 . .venv\Scripts\activate
 ```
 
-### 3) Install base dependencies
+### 3) Install dependencies
+
+**Option A: Using pip install (recommended for development)**
 ```bash
+# Base dependencies only
 pip install -e .
+
+# Or install with extras (choose what you need)
+pip install -e .[mcp]          # MCP server
+pip install -e .[api]          # API testing (Schemathesis)
+pip install -e .[ui]           # UI testing (Playwright)
+pip install -e .[llm]          # Local LLM (Ollama) - optional
+pip install -e .[report,config,cov,perf]  # Other extras
 ```
-Optional extras (install as needed):
+
+**Option B: Using requirements.txt files**
 ```bash
-# MCP runtime
-pip install -e .[mcp]
-# API testing
-pip install -e .[api]
-# UI testing (Playwright Python + browsers)
-pip install -e .[ui]
-# Performance testing
-pip install -e .[perf]
-# Report (HTML rendering)
-pip install -e .[report]
-# Config/Env convenience
-pip install -e .[config]
-# Local LLM (optional; enables generation/summarization)
-pip install -e .[llm]
-# Coverage (pytest-cov)
-pip install -e .[cov]
+# Base dependencies
+pip install -r requirements.txt
+
+# Add specific features
+pip install -r requirements-mcp.txt
+pip install -r requirements-api.txt
+pip install -r requirements-ui.txt
+pip install -r requirements-llm.txt  # Optional
+
+# Or install everything for development
+pip install -r requirements-dev.txt
 ```
 
 ### 4) CLI usage
@@ -60,6 +70,39 @@ qaagent analyze .
 qaagent pytest-run --path tests --no-junit
 # With coverage (writes coverage.xml + HTML report)
 qaagent pytest-run --path tests --cov --cov-target src
+
+# Run environment health check
+qaagent doctor
+qaagent doctor --json-out
+
+# Discover routes and assess risks
+qaagent analyze routes --openapi examples/petstore-api/openapi.yaml --out routes.json
+qaagent analyze risks --routes routes.json --markdown risks.md
+qaagent analyze strategy --routes routes.json --risks risks.json --out strategy.yaml
+# Validate the analysis pipeline against the petstore example
+scripts/validate_week1.sh
+
+# Configure and switch between targets
+qaagent config init . --template fastapi --name petstore
+qaagent targets list
+qaagent use petstore
+
+# Generate BDD scenarios (Behave)
+qaagent generate behave --out tests/qaagent/behave
+behave tests/qaagent/behave
+
+# Generate pytest unit tests
+qaagent generate unit-tests --out tests/unit
+pytest tests/unit
+
+# Generate realistic test data (JSON, YAML, CSV)
+qaagent generate test-data Pet --count 50 --format json --out fixtures/pets.json
+qaagent generate test-data Owner --count 20 --format yaml --out fixtures/owners.yaml
+qaagent generate test-data User --count 100 --format csv --seed 42 --out fixtures/users.csv
+
+# Generate OpenAPI 3.0 spec from Next.js routes (NEW in Week 3!)
+qaagent generate openapi --auto-discover --out openapi.json
+qaagent generate openapi --auto-discover --format yaml --title "My API" --version 2.0.0
 
 # Run Schemathesis against an OpenAPI target (requires schemathesis)
 qaagent schemathesis-run --openapi openapi.yaml --base-url http://localhost:8000
@@ -129,14 +172,43 @@ Use your preferred MCP client to connect over stdio and invoke tools:
  - `generate_tests(kind, openapi, base_url, max_tests)`
  - `summarize_findings(findings, fmt)`
 
-## What’s here
+## Examples
+
+- [`examples/petstore-api`](examples/petstore-api/) bundles a FastAPI service, OpenAPI specification, and sample configuration so you can exercise QA Agent quickly.
+
+```bash
+# Install example dependencies (from project root)
+pip install -r examples/petstore-api/requirements.txt
+
+# Start the API server
+uvicorn server:app --app-dir examples/petstore-api --port 8765
+
+# In a second terminal, run the workflow
+qaagent analyze examples/petstore-api
+qaagent schemathesis-run --openapi examples/petstore-api/openapi.yaml --base-url http://localhost:8765
+qaagent report --sources reports/schemathesis/junit.xml --out reports/findings.md
+```
+
+## What's here
 - `src/qaagent/cli.py`: Typer CLI with useful QA commands.
+- `src/qaagent/doctor.py`: Health checks used by `qaagent doctor`.
 - `src/qaagent/mcp_server.py`: Minimal MCP server exposing QA tools.
-- `tests/test_smoke.py`: Import/version smoke test.
+- `src/qaagent/analyzers/`: Route discovery, risk assessment, and strategy generation modules.
+- `src/qaagent/discovery/`: **NEW!** Next.js App Router route discovery from source code (no OpenAPI spec needed).
+- `src/qaagent/openapi_gen/`: **NEW!** OpenAPI 3.0 spec generator from discovered routes.
+- `src/qaagent/repo/`: **NEW!** Git repository cloning, caching, and project type detection for remote repos.
+- `src/qaagent/generators/`: Test generators with realistic Faker-based test data:
+  - `behave_generator.py`: BDD scenarios for Behave
+  - `unit_test_generator.py`: Enhanced pytest unit tests with realistic fixtures
+  - `data_generator.py`: Realistic test data using Faker library
+- `examples/petstore-api/`: FastAPI example with OpenAPI spec and QA Agent config.
+- `tests/unit/`: Fast-running unit tests (100+ tests, 100% passing).
+- `tests/integration/`: End-to-end workflows (petstore API, doctor, MCP).
+- `tests/fixtures/data/`: Sample artifacts for report parsing tests.
 - `pyproject.toml`: Project config, scripts, optional extras.
  - UI commands: `playwright-install`, `playwright-scaffold`, `ui-run`.
  - Reporting: `qaagent report` to produce a consolidated Markdown report.
- - Config + API helpers: `.qaagent.toml`, `qaagent init`, `qaagent api-detect`, smarter `schemathesis-run`.
+ - Config + API helpers: `.qaagent.yaml`, `qaagent config init`, `qaagent api-detect`, smarter `schemathesis-run`.
 
 ### 7) Generate a QA Findings report
 ```bash
@@ -176,8 +248,33 @@ The Findings report will automatically include sections for:
 7. RAG/docs: Index repo/specs for context-aware analysis
 
 ## Notes
-- Local LLMs with Ollama work well for tool-use reasoning. You can later add a switch to cloud models via LiteLLM if needed.
-- On Windows, ensure CUDA-enabled packages match your driver/toolkit when you add GPU-accelerated libraries.
+
+### LLM Setup (Optional)
+This project works perfectly **without** any LLM - all LLM features have template fallbacks.
+
+If you want to use LLMs for test generation or summarization:
+
+**Option 1: Local LLM with Ollama (recommended for M1/M2/M3 Macs)**
+```bash
+# Install Ollama from https://ollama.ai
+# Or on Mac: brew install ollama
+
+# Pull a model (lightweight options work great on M1)
+ollama pull llama3.2:3b      # 3B params, fast, good for this use case
+ollama pull phi3:mini        # Alternative lightweight model
+
+# Start Ollama service
+ollama serve
+```
+
+**Option 2: Cloud APIs via LiteLLM**
+Set environment variables for Claude, GPT, etc. LiteLLM handles the rest.
+
+**Mac M1/M2/M3 Users**: Your Mac is excellent for this project! Ollama runs very efficiently on Apple Silicon with unified memory. For 90% of use cases, you don't need a more powerful machine.
+
+**Hybrid Setup**: If you have both a Mac and a Windows GPU machine, see [docs/HYBRID_SETUP.md](docs/HYBRID_SETUP.md) for how to use your Mac for development and offload heavy LLM tasks to your GPU server when needed (batch generation, large models, fine-tuning).
+
+**Windows Users**: If you have CUDA GPU, ensure drivers match when using GPU-accelerated packages.
 
 ### Config and secrets
 - Create config: `qaagent init` generates `.qaagent.toml` and `.env.example`.

@@ -1,0 +1,371 @@
+openapi: 3.0.3
+info:
+  title: QA Agent Petstore
+  version: 1.0.0
+  description: |
+    Sample Petstore API used by the QA Agent examples and integration tests.
+    The service keeps data in memory so that it can be started quickly for demos.
+servers:
+  - url: http://localhost:8765
+    description: Local development server
+tags:
+  - name: pets
+    description: Operations for managing pets
+  - name: owners
+    description: Manage pet owners
+  - name: analytics
+    description: Aggregate statistics
+  - name: internal
+    description: Internal operational endpoints
+paths:
+  /health:
+    get:
+      tags: [internal]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /pets:
+    get:
+      tags: [pets]
+      summary: List pets
+      operationId: listPets
+      responses:
+        "200":
+          description: Pets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+    post:
+      tags: [pets]
+      summary: Create a pet
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetCreate'
+      responses:
+        "201":
+          description: Pet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /pets/{pet_id}:
+    parameters:
+      - in: path
+        name: pet_id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identifier of the pet
+    get:
+      tags: [pets]
+      summary: Retrieve a pet
+      operationId: getPetById
+      responses:
+        "200":
+          description: Pet found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        "404":
+          description: Pet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      tags: [pets]
+      summary: Update a pet
+      operationId: updatePet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetCreate'
+      responses:
+        "200":
+          description: Pet updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        "404":
+          description: Pet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      tags: [pets]
+      summary: Delete a pet
+      operationId: deletePet
+      responses:
+        "204":
+          description: Pet deleted successfully
+        "404":
+          description: Pet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /pets/search:
+    get:
+      tags: [pets]
+      summary: Search pets
+      operationId: searchPets
+      parameters:
+        - in: query
+          name: tag
+          schema:
+            type: string
+          required: false
+          description: Filter pets by tag
+        - in: query
+          name: species
+          schema:
+            type: string
+          required: false
+          description: Filter pets by species
+      responses:
+        "200":
+          description: Matching pets returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+  /owners:
+    get:
+      tags: [owners]
+      summary: List owners
+      operationId: listOwners
+      responses:
+        "200":
+          description: Owners retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Owner'
+    post:
+      tags: [owners]
+      summary: Create an owner
+      operationId: createOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnerCreate'
+      responses:
+        "201":
+          description: Owner created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+  /owners/{owner_id}:
+    parameters:
+      - in: path
+        name: owner_id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identifier of the owner
+    get:
+      tags: [owners]
+      summary: Retrieve owner details
+      operationId: getOwner
+      responses:
+        "200":
+          description: Owner found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+        "404":
+          description: Owner not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /owners/{owner_id}/pets:
+    parameters:
+      - in: path
+        name: owner_id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identifier of the owner
+    get:
+      tags: [owners]
+      summary: List pets for owner
+      operationId: listOwnerPets
+      responses:
+        "200":
+          description: Pets owned by the given owner
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        "404":
+          description: Owner not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /stats/species:
+    get:
+      tags: [analytics]
+      summary: Species counts
+      operationId: getSpeciesStats
+      responses:
+        "200":
+          description: Counts of pets by species
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+      required:
+        - status
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Milo
+        species:
+          type: string
+          example: dog
+        age:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 5
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - friendly
+            - vaccinated
+        owner_id:
+          type: integer
+          nullable: true
+          example: 1
+      required:
+        - id
+        - name
+        - species
+    PetCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Fluffy
+        species:
+          type: string
+          example: cat
+        age:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 3
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - friendly
+            - therapy
+        owner_id:
+          type: integer
+          nullable: true
+          example: 1
+      required:
+        - name
+        - species
+    Owner:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Jane Doe
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: jane@example.com
+      required:
+        - id
+        - name
+    OwnerCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Jane Doe
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: jane@example.com
+      required:
+        - name
+    ApiError:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: Pet not found.
+      required:
+        - detail

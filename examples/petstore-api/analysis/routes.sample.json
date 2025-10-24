@@ -1,0 +1,60 @@
+[
+  {
+    "path": "/pets",
+    "method": "GET",
+    "auth_required": false,
+    "summary": "List pets",
+    "description": null,
+    "tags": ["pets"],
+    "params": {
+      "query": [
+        {"name": "limit", "in": "query", "description": "Maximum number of results"}
+      ]
+    },
+    "responses": {"200": {"description": "Successful response"}},
+    "source": "openapi",
+    "confidence": 1.0,
+    "metadata": {
+      "operation_id": "listPets",
+      "tags": ["pets"],
+      "security": [],
+      "summary": "List pets",
+      "deprecated": false
+    }
+  },
+  {
+    "path": "/pets",
+    "method": "POST",
+    "auth_required": false,
+    "summary": "Create pet",
+    "description": null,
+    "tags": ["pets"],
+    "params": {
+      "body": [
+        {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "species": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "responses": {"201": {"description": "Created"}},
+    "source": "openapi",
+    "confidence": 1.0,
+    "metadata": {
+      "operation_id": "createPet",
+      "tags": ["pets"],
+      "security": [],
+      "summary": "Create pet",
+      "deprecated": false
+    }
+  }
+]

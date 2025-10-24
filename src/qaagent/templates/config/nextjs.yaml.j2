@@ -1,0 +1,48 @@
+# QA Agent configuration (Next.js)
+project:
+  name: "{{ context.project_name }}"
+  type: "nextjs"
+
+app:
+  dev:
+    base_url: "{{ context.base_url or 'http://localhost:3000' }}"
+    start_command: "{{ context.start_command or 'npm run dev' }}"
+    health_endpoint: "{{ context.health_endpoint or '/api/health' }}"
+
+openapi:
+  auto_generate: true
+  source_dir: "{{ context.source_dir or 'src/app/api' }}"
+  spec_path: "{{ context.spec_path or '.qaagent/openapi.yaml' }}"
+  generator: "nextjs"
+
+# Test generation defaults
+tests:
+  output_dir: "tests/qaagent"
+  behave:
+    enabled: true
+    output_dir: "tests/qaagent/behave"
+    framework: "behave"
+  unit:
+    enabled: true
+    output_dir: "tests/qaagent/unit"
+    framework: "pytest"
+  data:
+    enabled: true
+    output_dir: "tests/qaagent/fixtures"
+    format: "json"
+
+exclude:
+  paths:
+    - "/api/internal/*"
+  tags: []
+
+risk_assessment:
+  disable_rules:
+    - "health_check_pagination"
+  severity_thresholds: {}
+
+llm:
+  enabled: false
+  provider: "ollama"
+  model: "qwen2.5-coder:7b"
+  fallback_to_templates: true

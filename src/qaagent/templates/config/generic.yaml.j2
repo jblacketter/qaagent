@@ -1,0 +1,45 @@
+# QA Agent configuration (generated)
+project:
+  name: "{{ context.project_name }}"
+  type: "{{ context.project_type }}"
+
+app:
+  dev:
+    base_url: "{{ context.base_url }}"
+    {% if context.start_command %}start_command: "{{ context.start_command }}"
+    {% endif %}health_endpoint: "{{ context.health_endpoint }}"
+
+openapi:
+  auto_generate: false
+  spec_path: "{{ context.spec_path }}"
+
+# Test generation defaults
+tests:
+  output_dir: "tests/qaagent"
+  behave:
+    enabled: true
+    output_dir: "tests/qaagent/behave"
+    framework: "behave"
+  unit:
+    enabled: true
+    output_dir: "tests/qaagent/unit"
+    framework: "pytest"
+  data:
+    enabled: true
+    output_dir: "tests/qaagent/fixtures"
+    format: "json"
+
+exclude:
+  paths: []
+  tags: []
+
+risk_assessment:
+  disable_rules:
+    - "health_check_pagination"
+  severity_thresholds: {}
+
+llm:
+  enabled: false
+  provider: "ollama"
+  model: "qwen2.5-coder:7b"
+  fallback_to_templates: true

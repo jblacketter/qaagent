@@ -1,0 +1,10 @@
+[api]
+openapi = "examples/petstore-api/openapi.yaml"
+base_url = "http://localhost:8765"
+timeout = 10.0
+tags = ["pets", "owners"]
+
+[api.auth]
+header_name = "Authorization"
+token_env = "PETSTORE_API_TOKEN"
+prefix = "Bearer "

@@ -3,11 +3,18 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
 .venv/
 venv/
 env/
+ENV/
+.virtualenv/
 .env
+.env.local
+.env.*.local
 
 # Build
 build/
@@ -37,6 +44,19 @@ node_modules/
 npm-debug.log*
 yarn-error.log*
 
+# User-specific config (but keep examples)
+.qaagent.toml
+!examples/**/.qaagent.toml
+
 # OS
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.log

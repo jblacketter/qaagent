@@ -1,0 +1,22 @@
+Feature: {{ feature_title }}
+{% if description %}  {{ description }}
+{% endif %}
+  Background:
+    Given the API base URL is "{{ base_url }}"
+    And I reset the request context
+
+{% for scenario in scenarios %}
+{% if scenario.tags %}  @{{ " @".join(scenario.tags) }}
+{% endif %}  Scenario: {{ scenario.title }}
+{% if scenario.given %}    Given {{ scenario.given[0] }}
+{% for step in scenario.given[1:] %}    And {{ step }}
+{% endfor %}{% endif %}
+    When I send a {{ scenario.when_method }} request to "{{ scenario.when_path }}"
+{% if scenario.then %}    Then {{ scenario.then[0] }}
+{% for step in scenario.then[1:] %}    And {{ step }}
+{% endfor %}{% else %}    # TODO: add assertions for this scenario
+{% endif %}
+{% for comment in scenario.comments %}    # {{ comment }}
+{% endfor %}
+
+{% endfor %}

@@ -1,0 +1,39 @@
+# Test Strategy Summary
+
+**Total routes:** {{ summary.total_routes }}  
+**Critical routes:** {{ summary.critical_routes }}  
+**High severity risks:** {{ high_risk_count }}
+
+## Test Pyramid Guidance
+
+- **Unit tests:** target 60% (~{{ recommended.unit_tests.count }})
+- **Integration tests:** target 30% (~{{ recommended.integration_tests.count }})
+- **E2E tests:** target 10% (~{{ recommended.e2e_tests.count }})
+
+## Priorities
+{% for priority in summary.priorities %}
+### {{ loop.index }}. {{ priority.name }}
+- **Reason:** {{ priority.reason }}
+- **Tests needed:** {{ priority.tests_needed }}
+- **Recommended focus:** {{ priority.focus | default('N/A') }}
+{% endfor %}
+
+## Sample Scenarios
+{% for scenario in sample_scenarios %}
+### {{ scenario.name }} ({{ scenario.type | upper }})
+Priority: {{ scenario.priority }}
+
+{% for step in scenario.steps %}- {{ step }}
+{% endfor %}
+{% endfor %}
+
+## Effort Estimates
+- Unit tests: {{ effort.unit_tests }}
+- Integration tests: {{ effort.integration_tests }}
+- End-to-end tests: {{ effort.e2e_tests }}
+- Total: {{ effort.total }}
+
+## Risk Snapshot
+{% for risk in risks[:5] %}
+- **{{ risk.severity.value.upper() }}** – {{ risk.title }} ({{ risk.route }})
+{% endfor %}

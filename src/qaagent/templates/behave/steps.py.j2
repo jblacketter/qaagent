@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+import json
+import os
+from typing import Optional
+
+import httpx
+from behave import given, when, then
+
+
+def _ensure_session(context) -> httpx.Client:
+    if getattr(context, "session", None) is None:
+        context.session = httpx.Client(timeout=10.0)
+    return context.session
+
+
+@given('the API base URL is "{base_url}"')
+def set_base_url(context, base_url: str) -> None:
+    context.base_url = base_url
+
+
+@given("I reset the request context")
+def reset_request_context(context) -> None:
+    context.headers = {}
+    context.request_params = None
+    context.request_body = None
+    context.response = None
+
+
+@given("I have API access")
+def have_api_access(context) -> None:
+    context.headers = context.headers or {}
+
+
+@given("I am not authenticated")
+def not_authenticated(context) -> None:
+    context.headers = {}
+
+
+@given('I authenticate as "{role}"')
+def authenticate_as(context, role: str) -> None:
+    # TODO: replace with project-specific authentication
+    token = os.getenv("QAAGENT_AUTH_TOKEN")
+    if token:
+        context.headers = {"Authorization": f"Bearer {token}"}
+    else:
+        context.headers = {}
+
+
+@when('I send a {method} request to "{path}"')
+def send_request(context, method: str, path: str) -> None:
+    base_url = getattr(context, "base_url", None)
+    if not base_url:
+        raise RuntimeError("Base URL not set. Ensure background step sets the API base URL.")
+    url = base_url.rstrip("/") + path
+    session = _ensure_session(context)
+    json_body: Optional[dict] = None
+    if context.text:
+        try:
+            json_body = json.loads(context.text)
+        except json.JSONDecodeError:
+            json_body = None
+    context.response = session.request(
+        method.upper(),
+        url,
+        headers=getattr(context, "headers", {}),
+        json=json_body,
+        params=getattr(context, "request_params", None),
+    )
+
+
+@then("the response status should be {status:d}")
+def assert_status(context, status: int) -> None:
+    if getattr(context, "response", None) is None:
+        raise AssertionError("No response available. Did the request step run?")
+    actual = context.response.status_code
+    assert (
+        actual == status
+    ), f"Expected status {status}, received {actual}. Response body: {context.response.text[:200]}"
+
+
+@then("the response should contain \"{text}\"")
+def assert_response_contains(context, text: str) -> None:
+    if getattr(context, "response", None) is None:
+        raise AssertionError("No response available. Did the request step run?")
+    body = context.response.text or ""
+    assert text in body, f"Expected '{text}' to be present in response body."

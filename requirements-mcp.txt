@@ -1,0 +1,5 @@
+# MCP Server Dependencies
+# Install with: pip install -r requirements-mcp.txt
+# Or: pip install -e .[mcp]
+
+mcp

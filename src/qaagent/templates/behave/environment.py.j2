@@ -1,0 +1,15 @@
+import os
+
+import httpx
+
+
+def before_all(context):
+    base_url = os.getenv("QAAGENT_BASE_URL", "{{ base_url }}")
+    context.base_url = base_url
+    context.session = httpx.Client(timeout=10.0)
+
+
+def after_all(context):
+    session = getattr(context, "session", None)
+    if session is not None:
+        session.close()

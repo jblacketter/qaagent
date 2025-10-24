@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import json
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -20,6 +20,10 @@ from .config import load_config
 from .openapi_utils import find_openapi_candidates, load_openapi, enumerate_operations
 from .a11y import run_axe
 from .llm import llm_available, generate_api_tests_from_spec, summarize_findings_text
+from .analyzers.route_discovery import discover_routes as discover_routes_internal
+from .analyzers.risk_assessment import assess_risks as assess_risks_internal
+from .analyzers.strategy_generator import build_strategy_summary
+from .analyzers.models import Route
 
 
 mcp = FastMCP("qaagent")
@@ -44,8 +48,89 @@ class PytestArgs(BaseModel):
     outdir: str = "reports/pytest"
 
 
+class DiscoverRoutesArgs(BaseModel):
+    openapi: str | None = None
+    target: str | None = None
+    source: str | None = None
+
+
+class AssessRisksArgs(BaseModel):
+    routes: list[dict] | None = None
+    routes_path: str | None = None
+    openapi: str | None = None
+
+
+class AnalyzeApplicationArgs(BaseModel):
+    openapi: str | None = None
+    routes_path: str | None = None
+
+
+def _load_routes_from_payload(payload: list[dict] | None) -> list[Route]:
+    if not payload:
+        return []
+    return [Route.from_dict(item) for item in payload]
+
+
+def _load_routes_for_risk(args: AssessRisksArgs) -> list[Route]:
+    if args.routes:
+        return _load_routes_from_payload(args.routes)
+    if args.routes_path:
+        data = json.loads(Path(args.routes_path).read_text(encoding="utf-8"))
+        if isinstance(data, dict) and "routes" in data:
+            data = data["routes"]
+        return _load_routes_from_payload(data)
+    if args.openapi:
+        return discover_routes_internal(openapi_path=args.openapi)
+    raise ValueError("Provide routes data via routes, routes_path, or openapi")
+
+
+@mcp.tool()
+def discover_routes(args: DiscoverRoutesArgs):
+    """Discover API routes from OpenAPI spec or source code. Returns list of routes with methods, paths, and metadata."""
+    routes = discover_routes_internal(target=args.target, openapi_path=args.openapi, source_path=args.source)
+    return {"routes": [route.to_dict() for route in routes]}
+
+
+@mcp.tool()
+def assess_risks(args: AssessRisksArgs):
+    """Assess security, performance, and reliability risks for API routes. Returns categorized risks with severity levels."""
+    try:
+        routes = _load_routes_for_risk(args)
+    except ValueError as exc:  # noqa: BLE001
+        return {"error": str(exc)}
+    risks = assess_risks_internal(routes)
+    return {"risks": [risk.to_dict() for risk in risks]}
+
+
+@mcp.tool()
+def analyze_application(args: AnalyzeApplicationArgs):
+    """Complete application analysis: discover routes, assess risks, and generate test strategy. Returns comprehensive analysis report."""
+    if args.routes_path or args.openapi:
+        routes = discover_routes_internal(openapi_path=args.openapi)
+        if args.routes_path:
+            # Override with persisted routes if provided
+            try:
+                data = json.loads(Path(args.routes_path).read_text(encoding="utf-8"))
+                if isinstance(data, dict) and "routes" in data:
+                    data = data["routes"]
+                routes = _load_routes_from_payload(data)
+            except Exception:  # noqa: BLE001
+                pass
+    else:
+        return {"error": "Provide openapi or routes_path for analysis."}
+
+    risks = assess_risks_internal(routes)
+    summary = build_strategy_summary(routes, risks)
+    return {
+        "routes": [route.to_dict() for route in routes],
+        "risks": [risk.to_dict() for risk in risks],
+        "strategy": summary.to_dict(),
+    }
+
+
 @mcp.tool()
 def schemathesis_run(args: SchemathesisArgs):
+    """Run Schemathesis API testing against OpenAPI spec. Returns test results with coverage metrics."""
     out = Path(args.outdir)
     ensure_dir(out)
     # Load config defaults if missing
@@ -65,11 +150,11 @@ def schemathesis_run(args: SchemathesisArgs):
         "schemathesis",
         "run",
         openapi,
-        "--base-url",
+        "--url",
         base_url,
         "--checks=all",
-        "--hypothesis-deadline=500",
-        "--junit-xml",
+        "--report", "junit",
+        "--report-junit-path",
         str(out / "junit.xml"),
     ]
     if args.timeout is not None:
@@ -91,12 +176,12 @@ def schemathesis_run(args: SchemathesisArgs):
     # Filters
     if args.tag:
         for t in args.tag:
-            cmd += ["--tag", t]
+            cmd += ["--include-tag", t]
     if args.operation_id:
         for oid in args.operation_id:
-            cmd += ["--operation-id", oid]
+            cmd += ["--include-operation-id", oid]
     if args.endpoint_pattern:
-        cmd += ["--endpoint", args.endpoint_pattern]
+        cmd += ["--include-path-regex", args.endpoint_pattern]
     res = run_command(cmd)
     meta = {"returncode": res.returncode, "stdout": res.stdout, "stderr": res.stderr}
     # Compute basic coverage
@@ -123,6 +208,7 @@ def schemathesis_run(args: SchemathesisArgs):
 
 @mcp.tool()
 def pytest_run(args: PytestArgs):
+    """Run pytest tests and generate JUnit XML report. Returns test execution results."""
     out = Path(args.outdir)
     ensure_dir(out)
     cmd = ["pytest", args.path, "-q"]
@@ -187,6 +273,7 @@ class A11yArgs(BaseModel):
 
 @mcp.tool()
 def a11y_run(args: A11yArgs):
+    """Run accessibility tests using axe-core. Returns violations categorized by impact level."""
     meta = run_axe(urls=args.url, outdir=Path(args.outdir), tags=args.tag, axe_source_url=args.axe_url, browser=args.browser)
     return meta
 
@@ -201,6 +288,7 @@ class LighthouseArgs(BaseModel):
 
 @mcp.tool()
 def lighthouse_audit(args: LighthouseArgs):
+    """Run Google Lighthouse performance and quality audit. Returns scores for performance, accessibility, best practices, and SEO."""
     # Reuse CLI logic by constructing the command
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
@@ -236,6 +324,7 @@ class GenTestsArgs(BaseModel):
 
 @mcp.tool()
 def generate_tests(args: GenTestsArgs):
+    """Generate test code using LLM from OpenAPI spec. Returns generated test code for API endpoints."""
     if args.kind != "api":
         return {"error": "Only kind=api is supported"}
     target = args.openapi
@@ -257,13 +346,14 @@ class SummarizeArgs(BaseModel):
 
 @mcp.tool()
 def summarize_findings(args: SummarizeArgs):
+    """Generate executive summary of QA findings using LLM. Returns natural language summary of test results and risks."""
     meta = generate_report(output=args.findings, fmt=args.fmt)
     text = summarize_findings_text(meta)
     return {"summary": text, "llm": llm_available()}
 
 
 def run_stdio():
-    asyncio.run(mcp.run_stdio())
+    mcp.run(transport="stdio")
 
 
 def main():

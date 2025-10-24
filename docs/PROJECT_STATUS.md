@@ -4,6 +4,7 @@ This document captures current capabilities and the plan so we can resume work s
 
 ## Current Capabilities
 - CLI (Typer): analyze, pytest-run, schemathesis-run (smart defaults, auth, filters), playwright install/scaffold/run, a11y-run (axe), lighthouse-audit, perf-scaffold/run, report (Markdown/HTML), init, api-detect.
+- Phase 2 commands: `qaagent analyze routes|risks|strategy` for intelligent analysis and `qaagent generate behave` for BDD assets.
 - MCP server: pytest_run, schemathesis_run (with coverage meta), generate_report_tool, detect_openapi, a11y_run, lighthouse_audit.
 - Findings report: Aggregates JUnit + artifacts; includes API coverage, A11y violations by impact, Lighthouse scores/metrics, Locust perf summary.
 - Tests: smoke/version, OpenAPI parsing, report HTML generation, extras summarization.
@@ -61,4 +62,3 @@ This document captures current capabilities and the plan so we can resume work s
 - Add coverage from pytest (python code coverage) into Findings
 - RAG: index repo/docs/specs for better context
 - Add Slack/Email notifier for Findings summary in CI
-

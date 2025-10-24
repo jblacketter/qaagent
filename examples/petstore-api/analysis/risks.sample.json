@@ -1,0 +1,16 @@
+[
+  {
+    "category": "performance",
+    "severity": "high",
+    "route": "GET /pets",
+    "title": "Potential missing pagination",
+    "description": "Large collection endpoints without pagination can exhaust resources.",
+    "recommendation": "Introduce limit/offset or cursor-based pagination for collection endpoints.",
+    "source": "rule",
+    "cwe_id": null,
+    "owasp_top_10": null,
+    "references": ["https://restfulapi.net/pagination/"],
+    "metadata": {},
+    "score": 4
+  }
+]

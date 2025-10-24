@@ -1,0 +1,58 @@
+test_strategy:
+  summary:
+    total_routes: {{ summary.total_routes }}
+    critical_routes: {{ summary.critical_routes }}
+    high_risks: {{ high_risk_count }}
+  test_pyramid:
+    unit_tests:
+      recommended: 60
+      current: {{ summary.metadata.get('unit_test_count', 0) }}
+      gap: {{ gaps.unit_tests }}
+    integration_tests:
+      recommended: 30
+      current: {{ summary.metadata.get('integration_test_count', 0) }}
+      gap: {{ gaps.integration_tests }}
+    e2e_tests:
+      recommended: 10
+      current: {{ summary.metadata.get('e2e_test_count', 0) }}
+      gap: {{ gaps.e2e_tests }}
+  recommended_tests:
+    unit_tests:
+      count: {{ recommended.unit_tests.count }}
+      focus:{% if recommended.unit_tests.focus %}
+{% for focus in recommended.unit_tests.focus %}
+        - {{ focus }}
+{% endfor %}{% else %} []{% endif %}
+    integration_tests:
+      count: {{ recommended.integration_tests.count }}
+      focus:{% if recommended.integration_tests.focus %}
+{% for focus in recommended.integration_tests.focus %}
+        - {{ focus }}
+{% endfor %}{% else %} []{% endif %}
+    e2e_tests:
+      count: {{ recommended.e2e_tests.count }}
+      critical_flows:{% if recommended.e2e_tests.critical_flows %}
+{% for flow in recommended.e2e_tests.critical_flows %}
+        - {{ flow }}
+{% endfor %}{% else %} []{% endif %}
+  priorities:
+{% for priority in summary.priorities %}
+    - name: {{ priority.name }}
+      reason: {{ priority.reason }}
+      tests_needed: {{ priority.tests_needed }}
+{% endfor %}
+  sample_scenarios:
+{% for scenario in sample_scenarios %}
+    - name: {{ scenario.name }}
+      type: {{ scenario.type }}
+      priority: {{ scenario.priority }}
+      steps:
+{% for step in scenario.steps %}
+        - {{ step }}
+{% endfor %}
+{% endfor %}
+  estimated_effort:
+    unit_tests: {{ effort.unit_tests }}
+    integration_tests: {{ effort.integration_tests }}
+    e2e_tests: {{ effort.e2e_tests }}
+    total: {{ effort.total }}

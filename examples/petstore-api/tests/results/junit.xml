@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites disabled="0" errors="0" failures="9" tests="13" time="9.109903991571628">
+	<testsuite disabled="0" errors="0" failures="9" name="schemathesis" skipped="9" tests="13" time="9.109903991571628" hostname="Jacks-Mac-mini.local">
+		<testcase name="GET /health" time="0.079041">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /pets" time="0.024318">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /pets" time="0.204154">
+			<failure type="failure" message="1. Test Case ID: JQ7QpB
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 201, 400
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;species&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;name&quot;:&quot;Fluffy&quot;,&quot;age&quot;:null,&quot;tags&quot;:[&quot;friendly&quot;,&quot;therapy&quot;],&quot;owner_id&quot;:null}}]}`
+
+Reproduce with: 
+
+    curl -X POST -H 'Content-Type: application/json' -d '{&quot;name&quot;: &quot;Fluffy&quot;, &quot;age&quot;: null, &quot;tags&quot;: [&quot;friendly&quot;, &quot;therapy&quot;], &quot;owner_id&quot;: null}' http://localhost:8765/pets"/>
+			<failure type="failure" message="1. Test Case ID: JQ7QpB
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 201, 400
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;species&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;name&quot;:&quot;Fluffy&quot;,&quot;age&quot;:null,&quot;tags&quot;:[&quot;friendly&quot;,&quot;therapy&quot;],&quot;owner_id&quot;:null}}]}`
+
+Reproduce with: 
+
+    curl -X POST -H 'Content-Type: application/json' -d '{&quot;name&quot;: &quot;Fluffy&quot;, &quot;age&quot;: null, &quot;tags&quot;: [&quot;friendly&quot;, &quot;therapy&quot;], &quot;owner_id&quot;: null}' http://localhost:8765/pets"/>
+		</testcase>
+		<testcase name="GET /pets/{pet_id}" time="0.064203">
+			<failure type="failure" message="1. Test Case ID: NqEwK6
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/pets/null%2Cnull"/>
+			<failure type="failure" message="1. Test Case ID: NqEwK6
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/pets/null%2Cnull"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /pets/{pet_id}" time="0.040635">
+			<failure type="failure" message="1. Test Case ID: D71Eod
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 400, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X PUT -H 'Content-Type: application/json' -d '{&quot;name&quot;: &quot;Fluffy&quot;, &quot;species&quot;: &quot;cat&quot;, &quot;age&quot;: null, &quot;tags&quot;: [&quot;friendly&quot;, &quot;therapy&quot;], &quot;owner_id&quot;: null}' http://localhost:8765/pets/null%2Cnull"/>
+			<failure type="failure" message="1. Test Case ID: D71Eod
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 400, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X PUT -H 'Content-Type: application/json' -d '{&quot;name&quot;: &quot;Fluffy&quot;, &quot;species&quot;: &quot;cat&quot;, &quot;age&quot;: null, &quot;tags&quot;: [&quot;friendly&quot;, &quot;therapy&quot;], &quot;owner_id&quot;: null}' http://localhost:8765/pets/null%2Cnull"/>
+		</testcase>
+		<testcase name="DELETE /pets/{pet_id}" time="0.059273">
+			<failure type="failure" message="1. Test Case ID: 4iGjTT
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 204, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X DELETE http://localhost:8765/pets/null%2Cnull"/>
+			<failure type="failure" message="1. Test Case ID: 4iGjTT
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 204, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X DELETE http://localhost:8765/pets/null%2Cnull"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /pets/search" time="0.012493">
+			<failure type="failure" message="1. Test Case ID: Abm49l
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;search&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET 'http://localhost:8765/pets/search?tag=&amp;x-schemathesis-unknown-property=42'"/>
+			<failure type="failure" message="1. Test Case ID: Abm49l
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;search&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET 'http://localhost:8765/pets/search?tag=&amp;x-schemathesis-unknown-property=42'
+
+2. Test Case ID: 0sByVi
+
+- API rejected schema-compliant request
+
+    Valid data should have been accepted
+    Expected: 2xx, 401, 403, 404, 5xx
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;pet_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;search&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/pets/search"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /owners" time="0.024864">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /owners" time="0.034385">
+			<failure type="failure" message="1. Test Case ID: z5MLL2
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 201
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;name&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;email&quot;:null}}]}`
+
+Reproduce with: 
+
+    curl -X POST -H 'Content-Type: application/json' -d '{&quot;email&quot;: null}' http://localhost:8765/owners"/>
+			<failure type="failure" message="1. Test Case ID: z5MLL2
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 201
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;name&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;email&quot;:null}}]}`
+
+Reproduce with: 
+
+    curl -X POST -H 'Content-Type: application/json' -d '{&quot;email&quot;: null}' http://localhost:8765/owners"/>
+		</testcase>
+		<testcase name="GET /owners/{owner_id}" time="0.062122">
+			<failure type="failure" message="1. Test Case ID: o7LCXf
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;owner_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/owners/null%2Cnull"/>
+			<failure type="failure" message="1. Test Case ID: o7LCXf
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;owner_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/owners/null%2Cnull"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /owners/{owner_id}/pets" time="0.062991">
+			<failure type="failure" message="1. Test Case ID: EB5eKx
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;owner_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/owners/null%2Cnull/pets"/>
+			<failure type="failure" message="1. Test Case ID: EB5eKx
+
+- Undocumented HTTP status code
+
+    Received: 422
+    Documented: 200, 404
+
+[422] Unprocessable Entity:
+
+    `{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;owner_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;null,null&quot;}]}`
+
+Reproduce with: 
+
+    curl -X GET http://localhost:8765/owners/null%2Cnull/pets"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /stats/species" time="0.025692">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="Stateful tests" time="8.415733">
+			<failure type="failure" message="1. Test Case ID: oB1ByE
+
+- API rejected schema-compliant request
+
+    Valid data should have been accepted
+    Expected: 2xx, 401, 403, 404, 5xx
+
+[400] Bad Request:
+
+    `{&quot;detail&quot;:&quot;Owner -17828 does not exist.&quot;}`
+
+Reproduce with: 
+
+    curl -X POST -H 'Content-Type: application/json' -d '{&quot;name&quot;: &quot;\ud841\udf12\u00d3q6\u0018&quot;, &quot;species&quot;: &quot;\ud9fe\ude68\udbaf\udc3d\uda44\ude15\ud9fa\udcfb\u009b\u00ab\u00ff\u00e4&quot;, &quot;age&quot;: 122, &quot;owner_id&quot;: -17828, &quot;\u00fe\u00f0\u00e5&quot;: [[[], [{&quot;\u00fc\u0092O\u3bfcF\u00b7\u0085\u0018&quot;: &quot;\u00c6w\ud950\udf69p\u0085\u001c!\u001c\ud888\udeef\u008a5\u00f4\u00a6i&quot;, &quot;K&quot;: false, &quot;&gt;4&quot;: false}], {&quot;\u00e12\u008a\u00ed\u00f9&quot;: -19437, &quot;\u00d5\u001f\u0095\u0015\u00af\u00e2&quot;: -38}], [null, &quot;m\udbe1\udd40a\u00bbK&quot;, null]], &quot;tags&quot;: []}' http://localhost:8765/pets"/>
+		</testcase>
+	</testsuite>
+</testsuites>

@@ -1,0 +1,16 @@
+# Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# Additional dev tools
+pytest-cov>=4.1
+pytest-asyncio>=0.23
+jinja2>=3.1
+python-dotenv>=1.0
+locust
+
+# Code quality (optional)
+black
+ruff
+mypy

@@ -1,0 +1,3 @@
+fastapi>=0.110,<0.116
+uvicorn[standard]>=0.31.1,<0.32
+pyyaml>=6.0,<7.0
