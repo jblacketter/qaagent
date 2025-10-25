@@ -5,6 +5,9 @@ This document captures current capabilities and the plan so we can resume work s
 ## Current Capabilities
 - CLI (Typer): analyze, pytest-run, schemathesis-run (smart defaults, auth, filters), playwright install/scaffold/run, a11y-run (axe), lighthouse-audit, perf-scaffold/run, report (Markdown/HTML), init, api-detect.
 - Phase 2 commands: `qaagent analyze routes|risks|strategy` for intelligent analysis and `qaagent generate behave` for BDD assets.
+- Phase 3 additions: Target management (`qaagent targets add/list/remove`, `qaagent use`), workspace system (`~/.qaagent/workspace/<target>/`), `qaagent generate openapi` with Next.js route discovery, `qaagent dashboard` for interactive visual reports.
+- **Web UI (NEW)**: Complete browser-based GUI (`qaagent web-ui`) with 5 tabs (Home, Configure, Commands, Reports, Workspace), real-time WebSocket updates, target management, command execution, and embedded dashboard viewer.
+- **Enhanced Dashboard (NEW)**: Interactive HTML dashboard with tabs (Overview/Risks/Routes/Tests), clickable charts, advanced filtering, search, sortable tables, and risk detail modals.
 - MCP server: pytest_run, schemathesis_run (with coverage meta), generate_report_tool, detect_openapi, a11y_run, lighthouse_audit.
 - Findings report: Aggregates JUnit + artifacts; includes API coverage, A11y violations by impact, Lighthouse scores/metrics, Locust perf summary.
 - Tests: smoke/version, OpenAPI parsing, report HTML generation, extras summarization.
