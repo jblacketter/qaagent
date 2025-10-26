@@ -1,0 +1,32 @@
+# qaagent risk_config.yaml — default weights and thresholds
+version: 1
+scoring:
+  weights:
+    security: 3.0
+    coverage: 2.0
+    churn: 2.0
+    complexity: 1.5
+    api_exposure: 1.0
+    a11y: 0.5
+    performance: 1.0
+  normalization: { strategy: minmax }
+  caps: { max_total: 100 }
+prioritization:
+  bands:
+    - { name: "P0", min_score: 80 }
+    - { name: "P1", min_score: 65 }
+    - { name: "P2", min_score: 50 }
+    - { name: "P3", min_score: 0 }
+confidence:
+  factors:
+    evidence_density_weight: 0.6
+    recency_weight: 0.3
+    tool_diversity_weight: 0.1
+  scale: [0.0,1.0]
+policies:
+  allow_external_ai: false
+  max_external_tokens: 0
+reporting:
+  top_n_risks: 10
+  include_heatmap: true
+  include_cuj_view: true

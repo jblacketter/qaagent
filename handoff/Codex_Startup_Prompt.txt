@@ -1,0 +1,2 @@
+(System prompt for Codex — see QA handoff guide)
+[...same as previous version...]

@@ -75,10 +75,13 @@ qaagent pytest-run --path tests --cov --cov-target src
 qaagent doctor
 qaagent doctor --json-out
 
-# Discover routes and assess risks
+# Discover routes, collect evidence, and aggregate risks
 qaagent analyze routes --openapi examples/petstore-api/openapi.yaml --out routes.json
-qaagent analyze risks --routes routes.json --markdown risks.md
-qaagent analyze strategy --routes routes.json --risks risks.json --out strategy.yaml
+qaagent analyze collectors examples/petstore-api
+qaagent analyze risks --top 15 --json-out risks.json
+qaagent analyze recommendations --json-out recommendations.json
+# Start read-only API server
+qaagent api --runs-dir ~/.qaagent/runs --port 8765
 # Validate the analysis pipeline against the petstore example
 scripts/validate_week1.sh
 
@@ -100,7 +103,7 @@ qaagent generate test-data Pet --count 50 --format json --out fixtures/pets.json
 qaagent generate test-data Owner --count 20 --format yaml --out fixtures/owners.yaml
 qaagent generate test-data User --count 100 --format csv --seed 42 --out fixtures/users.csv
 
-# Generate OpenAPI 3.0 spec from Next.js routes (NEW in Week 3!)
+# Generate OpenAPI 3.0 spec from Next.js routes
 qaagent generate openapi --auto-discover --out openapi.json
 qaagent generate openapi --auto-discover --format yaml --title "My API" --version 2.0.0
 
@@ -193,7 +196,8 @@ qaagent report --sources reports/schemathesis/junit.xml --out reports/findings.m
 - `src/qaagent/cli.py`: Typer CLI with useful QA commands.
 - `src/qaagent/doctor.py`: Health checks used by `qaagent doctor`.
 - `src/qaagent/mcp_server.py`: Minimal MCP server exposing QA tools.
-- `src/qaagent/analyzers/`: Route discovery, risk assessment, and strategy generation modules.
+- `src/qaagent/analyzers/`: Route discovery, Sprint 2 risk aggregation, coverage mapping, and recommendation engine.
+- `src/qaagent/api/`: FastAPI application exposing runs, evidence, risks, and recommendations.
 - `src/qaagent/discovery/`: **NEW!** Next.js App Router route discovery from source code (no OpenAPI spec needed).
 - `src/qaagent/openapi_gen/`: **NEW!** OpenAPI 3.0 spec generator from discovered routes.
 - `src/qaagent/repo/`: **NEW!** Git repository cloning, caching, and project type detection for remote repos.

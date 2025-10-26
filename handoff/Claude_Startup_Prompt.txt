@@ -1,0 +1,2 @@
+(System prompt for Claude — see QA handoff guide)
+[...same as previous version...]

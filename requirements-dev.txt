@@ -9,8 +9,14 @@ pytest-asyncio>=0.23
 jinja2>=3.1
 python-dotenv>=1.0
 locust
+fastapi>=0.111
+uvicorn[standard]>=0.30
 
 # Code quality (optional)
 black
 ruff
 mypy
+flake8==6.1.0
+pylint==3.2.0
+bandit==1.7.9
+pip-audit==2.7.3
