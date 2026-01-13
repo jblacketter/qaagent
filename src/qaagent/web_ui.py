@@ -35,6 +35,11 @@ app = FastAPI(title="QA Agent Web UI", version="1.0.0")
 # Store active WebSocket connections for real-time updates
 active_connections: List[WebSocket] = []
 
+# Mount the React dashboard static files
+dashboard_dist = Path(__file__).parent / "dashboard" / "frontend" / "dist"
+if dashboard_dist.exists():
+    app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
+
 
 class TargetInput(BaseModel):
     name: str
@@ -50,11 +55,16 @@ class CommandRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    """Serve the main web UI."""
+    """Serve the React dashboard."""
+    dashboard_index = Path(__file__).parent / "dashboard" / "frontend" / "dist" / "index.html"
+    if dashboard_index.exists():
+        return FileResponse(dashboard_index)
+
+    # Fallback to old template if React build doesn't exist
     html_path = Path(__file__).parent / "templates" / "web_ui.html"
     if html_path.exists():
         return html_path.read_text()
-    return "<h1>QA Agent Web UI</h1><p>UI template not found</p>"
+    return "<h1>QA Agent Web UI</h1><p>UI template not found. Run 'npm run build' in src/qaagent/dashboard/frontend/</p>"
 
 
 @app.get("/api/targets")
@@ -297,6 +307,20 @@ async def get_dashboard(target_name: str):
         return FileResponse(dashboard_path, media_type="text/html")
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
+
+
+# Catch-all route for React Router (must be last)
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def catch_all(full_path: str):
+    """Serve React app for all non-API routes (for client-side routing)."""
+    # Only serve React app for non-API routes
+    if not full_path.startswith("api/"):
+        dashboard_index = Path(__file__).parent / "dashboard" / "frontend" / "dist" / "index.html"
+        if dashboard_index.exists():
+            return FileResponse(dashboard_index)
+
+    # If it's an API route that wasn't caught, return 404
+    return JSONResponse({"error": "Not found"}, status_code=404)
 
 
 @app.websocket("/ws")

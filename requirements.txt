@@ -7,6 +7,7 @@ typer>=0.12
 pydantic>=2.7
 rich>=13.7
 pytest>=7.4
+autopep8
 
 # Optional extras - install as needed:
 # pip install -r requirements-mcp.txt

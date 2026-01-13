@@ -98,3 +98,34 @@ export interface RepositoryCreate {
   repo_type: "local" | "github";
   analysis_options: Record<string, boolean>;
 }
+
+export interface FixableCategory {
+  category: string;
+  tool: string;
+  file_count: number;
+  issue_count: number;
+  auto_fixable: boolean;
+  severity_breakdown: Record<string, number>;
+  description: string;
+}
+
+export interface FixableIssuesSummary {
+  categories: FixableCategory[];
+  total_fixable_files: number;
+  total_fixable_issues: number;
+  total_manual_files: number;
+}
+
+export interface ApplyFixRequest {
+  category: string;
+  tool: string;
+  files?: string[];
+}
+
+export interface ApplyFixResponse {
+  status: string;
+  files_modified: number;
+  files_failed: number;
+  message: string;
+  errors: string[];
+}

@@ -8,6 +8,9 @@ import type {
   RunTrendPoint,
   Repository,
   RepositoryCreate,
+  FixableIssuesSummary,
+  ApplyFixRequest,
+  ApplyFixResponse,
 } from "../types";
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -91,6 +94,18 @@ export class QAAgentAPI {
 
   async getRepositoryStatus(repoId: string): Promise<{ repo_id: string; status: string; last_scan: string }> {
     return this.request(`/api/repositories/${repoId}/status`);
+  }
+
+  // Auto-Fix Management
+  async getFixableIssues(runId: string): Promise<FixableIssuesSummary> {
+    return this.request(`/api/runs/${runId}/fixable-issues`);
+  }
+
+  async applyFix(runId: string, request: ApplyFixRequest): Promise<ApplyFixResponse> {
+    return this.request(`/api/runs/${runId}/apply-fix`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 }
 

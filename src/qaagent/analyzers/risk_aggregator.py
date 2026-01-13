@@ -27,27 +27,29 @@ class RiskAggregator:
         churn = reader.read_churn()
 
         security_scores = self._compute_security(findings)
+        quality_scores = self._compute_quality(findings)
         coverage_scores = self._compute_coverage(coverage)
         churn_scores = self._compute_churn(churn)
 
-        all_components = set(security_scores) | set(coverage_scores) | set(churn_scores)
+        all_components = set(security_scores) | set(quality_scores) | set(coverage_scores) | set(churn_scores)
         records: List[RiskRecord] = []
 
         for component in all_components:
             raw_factors = {
                 "security": security_scores.get(component, 0.0),
+                "quality": quality_scores.get(component, 0.0),
                 "coverage": coverage_scores.get(component, 0.0),
                 "churn": churn_scores.get(component, 0.0),
             }
             factors = {
-                name: value * getattr(self.config.weights, name)
+                name: value * getattr(self.config.weights, name, 1.0)
                 for name, value in raw_factors.items()
             }
             score = sum(factors.values())
             score = min(score, self.config.max_total)
             band = self._assign_band(score)
             present_factors = sum(1 for val in raw_factors.values() if val > 0)
-            confidence = present_factors / 3.0
+            confidence = present_factors / 4.0  # Now 4 factors instead of 3
             severity = self._severity_from_score(score)
 
             title = f"{component} risk ({severity})"
@@ -71,13 +73,58 @@ class RiskAggregator:
         return records
 
     def _compute_security(self, findings: Iterable) -> Dict[str, float]:
+        """
+        Compute security scores based on findings from security-specific tools.
+
+        Only counts findings from actual security scanners (bandit, pip-audit).
+        Flake8/pylint findings are quality issues, not security issues.
+        """
         weights = {"critical": 2.0, "high": 2.0, "medium": 1.0, "low": 0.5}
         scores: Dict[str, float] = defaultdict(float)
+
+        # List of tools that are security-focused
+        security_tools = {"bandit", "pip-audit"}
+
         for finding in findings:
+            # Skip non-security tools (flake8, pylint are quality tools)
+            tool = getattr(finding, "tool", "")
+            if tool not in security_tools:
+                continue
+
             severity = getattr(finding, "severity", "medium")
             if hasattr(severity, "value"):
                 severity = severity.value
             weight = weights.get(str(severity).lower(), 1.0)
+            component = getattr(finding, "file", None)
+            if not component:
+                continue
+            scores[component] += weight
+        return scores
+
+    def _compute_quality(self, findings: Iterable) -> Dict[str, float]:
+        """
+        Compute code quality scores based on linting/formatting tools.
+
+        Only counts findings from quality tools (flake8, pylint).
+        Uses lower weight since these are not security issues.
+        """
+        # Lower weights for quality issues (they're important but not security risks)
+        weights = {"error": 0.5, "warning": 0.1}
+        scores: Dict[str, float] = defaultdict(float)
+
+        # List of tools that are quality-focused
+        quality_tools = {"flake8", "pylint"}
+
+        for finding in findings:
+            # Only count quality tools
+            tool = getattr(finding, "tool", "")
+            if tool not in quality_tools:
+                continue
+
+            severity = getattr(finding, "severity", "warning")
+            if hasattr(severity, "value"):
+                severity = severity.value
+            weight = weights.get(str(severity).lower(), 0.1)
             component = getattr(finding, "file", None)
             if not component:
                 continue

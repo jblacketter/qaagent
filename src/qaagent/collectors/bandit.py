@@ -23,7 +23,9 @@ class BanditConfig:
     executable: str = "bandit"
     target: str = "."
     extra_args: Optional[List[str]] = None
-    timeout: int = 180
+    timeout: int = 600  # Increased to 10 minutes for large projects
+    # Common directories to skip for performance
+    skip_patterns: Optional[List[str]] = None
 
 
 class BanditCollector:
@@ -31,6 +33,20 @@ class BanditCollector:
 
     def __init__(self, config: Optional[BanditConfig] = None) -> None:
         self.config = config or BanditConfig()
+        # Default skip patterns for performance (avoid large dependency dirs)
+        if self.config.skip_patterns is None:
+            self.config.skip_patterns = [
+                "*/node_modules/*",
+                "*/.venv/*",
+                "*/venv/*",
+                "*/.git/*",
+                "*/dist/*",
+                "*/build/*",
+                "*/__pycache__/*",
+                "*/.next/*",
+                "*/coverage/*",
+                "*/.pytest_cache/*",
+            ]
 
     def run(
         self,
@@ -95,6 +111,13 @@ class BanditCollector:
 
     def _build_command(self) -> List[str]:
         args = [self.config.executable, "-f", "json", "-q", "-r", self.config.target]
+
+        # Add exclude patterns for better performance (skip venv, node_modules, etc.)
+        if self.config.skip_patterns:
+            # Bandit expects comma-separated patterns with --exclude flag
+            exclude_list = ",".join(self.config.skip_patterns)
+            args.extend(["--exclude", exclude_list])
+
         if self.config.extra_args:
             args.extend(self.config.extra_args)
         return args

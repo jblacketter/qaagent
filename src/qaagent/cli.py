@@ -1631,6 +1631,85 @@ def dashboard(
         raise typer.Exit(code=1)
 
 
+@app.command("fix")
+def fix_issues(
+    tool: str = typer.Option("autopep8", help="Formatting tool to use (autopep8, black, isort, or all)"),
+    target: Optional[str] = typer.Argument(None, help="Target name (uses active target if not specified)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be fixed without making changes"),
+):
+    """Auto-fix common code quality issues (formatting, imports, etc.)."""
+    from qaagent.autofix import AutoFixer
+
+    # Get target path
+    if target is None:
+        try:
+            active_entry, _ = load_active_profile()
+            target_name = active_entry.name
+            target_path = active_entry.resolved_path()
+        except Exception:
+            console.print("[red]No active target. Specify target name or use `qaagent use <target>`[/red]")
+            raise typer.Exit(code=2)
+    else:
+        manager = _target_manager()
+        entry = manager.get(target)
+        if not entry:
+            console.print(f"[red]Target '{target}' not found[/red]")
+            raise typer.Exit(code=1)
+        target_name = entry.name
+        target_path = entry.resolved_path()
+
+    console.print(f"[cyan]Fixing issues in '{target_name}' at {target_path}[/cyan]")
+
+    if dry_run:
+        console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
+
+    fixer = AutoFixer(target_path)
+
+    # Apply fixes based on tool selection
+    if tool == "all":
+        # Run all fixers
+        console.print("[cyan]Running autopep8...[/cyan]")
+        result = fixer.fix_formatting("autopep8")
+        _print_fix_result(result)
+
+        console.print("[cyan]Running isort...[/cyan]")
+        result = fixer.fix_imports()
+        _print_fix_result(result)
+
+    elif tool in ("autopep8", "black"):
+        console.print(f"[cyan]Running {tool}...[/cyan]")
+        result = fixer.fix_formatting(tool)
+        _print_fix_result(result)
+
+    elif tool == "isort":
+        console.print("[cyan]Running isort...[/cyan]")
+        result = fixer.fix_imports()
+        _print_fix_result(result)
+
+    else:
+        console.print(f"[red]Unknown tool: {tool}[/red]")
+        console.print("[yellow]Available tools: autopep8, black, isort, all[/yellow]")
+        raise typer.Exit(code=1)
+
+    console.print()
+    console.print("[green]✓ Fixes applied successfully![/green]")
+    console.print("[yellow]Tip:[/yellow] Re-run analysis to verify fixes:")
+    console.print(f"  qaagent analyze routes {target_name}")
+
+
+def _print_fix_result(result):
+    """Helper to print fix result."""
+    if result.success:
+        if result.files_modified > 0:
+            console.print(f"[green]  ✓ {result.message}[/green]")
+        else:
+            console.print(f"[dim]  ✓ {result.message} (no changes needed)[/dim]")
+    else:
+        console.print(f"[red]  ✗ {result.message}[/red]")
+        for error in result.errors:
+            console.print(f"[red]    {error}[/red]")
+
+
 @app.command("web-ui")
 def web_ui(
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),

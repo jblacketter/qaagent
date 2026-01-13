@@ -12,6 +12,7 @@ import yaml
 @dataclass
 class RiskWeights:
     security: float = 3.0
+    quality: float = 0.5  # Code quality issues (flake8, pylint) - lower weight than security
     coverage: float = 2.0
     churn: float = 2.0
     complexity: float = 1.5

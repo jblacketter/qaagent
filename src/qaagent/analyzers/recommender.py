@@ -74,7 +74,38 @@ class RecommendationEngine:
         return "low"
 
     def _build_details(self, risk: RiskRecord) -> str:
-        return (
+        details = (
             f"Risk score {risk.score:.1f} (band {risk.band}). "
-            f"Factors: {', '.join(f"{k}={v:.1f}" for k, v in risk.factors.items())}"
+            f"Factors: {', '.join(f"{k}={v:.1f}" for k, v in risk.factors.items())}\n\n"
         )
+
+        # Add actionable fix commands based on risk factors
+        fix_commands = self._generate_fix_commands(risk)
+        if fix_commands:
+            details += "Recommended Actions:\n"
+            for cmd in fix_commands:
+                details += f"  • {cmd}\n"
+
+        return details.strip()
+
+    def _generate_fix_commands(self, risk: RiskRecord) -> list[str]:
+        """Generate actionable fix commands for a risk."""
+        commands = []
+
+        # Check security factor
+        if risk.factors.get("security", 0) > 50:
+            commands.append("Review security issues: Check evidence for bandit/security findings")
+            commands.append(f"Manual review required for: {risk.component}")
+
+        # Check if there are quality/formatting issues
+        if "quality" in risk.metadata or risk.factors.get("coverage", 0) > 0:
+            commands.append(f"Auto-fix formatting: qaagent fix --tool all")
+            commands.append(f"View detailed issues: grep '{risk.component}' ~/.qaagent/runs/*/evidence/quality.jsonl")
+
+        # General recommendation
+        if risk.score >= 80:
+            commands.append("PRIORITY: Address this critical risk immediately")
+        elif risk.score >= 65:
+            commands.append("Schedule fix in current sprint")
+
+        return commands

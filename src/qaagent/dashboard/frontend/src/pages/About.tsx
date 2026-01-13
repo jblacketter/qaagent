@@ -13,12 +13,7 @@ export function AboutPage() {
           What is QA Agent?
         </h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          QA Agent is an automated repository analysis tool designed for Senior QA Engineers and SDETs with 20+ years of experience.
-          It helps you quickly assess code quality, test coverage, security vulnerabilities, and risk areas in your codebase.
-        </p>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Instead of manually reviewing repositories to create QA strategy documents, QA Agent automates the initial analysis phase,
-          providing instant insights into what areas need attention, where tests are lacking, and which components carry the highest risk.
+          QA Agent scans your repository to analyze fix risks.
         </p>
       </section>
 

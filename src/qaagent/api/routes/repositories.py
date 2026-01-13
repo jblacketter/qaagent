@@ -132,7 +132,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                timeout=300,  # 5 minute timeout
+                timeout=900,  # 15 minute timeout (for large projects with bandit)
             )
 
             if result.returncode != 0:
@@ -155,7 +155,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
 
     except subprocess.TimeoutExpired:
         repo.status = "error"
-        raise HTTPException(status_code=500, detail="Analysis timed out after 5 minutes")
+        raise HTTPException(status_code=500, detail="Analysis timed out after 15 minutes")
     except Exception as e:
         repo.status = "error"
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")

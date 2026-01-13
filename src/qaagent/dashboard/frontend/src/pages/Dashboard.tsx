@@ -16,6 +16,7 @@ import { CoverageTrendChart } from "../components/Charts/CoverageTrendChart";
 import { CujCoverageRadial } from "../components/Charts/CujCoverageRadial";
 import { ExportMenu } from "../components/ui/ExportMenu";
 import { exportDataAsCSV, exportDataAsJSON } from "../utils/export";
+import { FixCard } from "../components/FixCard";
 
 export function DashboardPage() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -200,6 +201,9 @@ export function DashboardPage() {
           Some sections failed to load. Refresh the page after confirming the API is running.
         </Alert>
       )}
+
+      {/* Auto-Fix Card - Show for latest run */}
+      {latestRunId && <FixCard runId={latestRunId} />}
 
       <section className="grid gap-4 xl:grid-cols-3">
         <ResponsiveSection
