@@ -37,3 +37,39 @@ All three milestones (4A, 4B, 4C) implemented in a single round.
 
 ### Files
 See `docs/phases/enhanced-analysis_impl.md` for complete file list.
+
+## Round 2
+
+### Changes Made (addressing reviewer feedback from round 1)
+
+#### Issue 1 [HIGH]: Generated CI templates use invalid CLI invocations
+- Fixed `analyze strategy --routes` → `--routes-file` in both GitHub Actions and GitLab CI templates
+- Fixed `report generate --format html` → `report --fmt html` in both templates
+
+#### Issue 2 [HIGH]: Test generation steps don't pass discovered routes
+- Added `--routes-file routes.json` to all `generate unit-tests`, `generate behave`, and `generate e2e` steps in both templates
+
+#### Issue 3 [HIGH]: GitLab template active-target state not persisted across jobs
+- Replaced single `setup` stage with a YAML anchor `.bootstrap: &bootstrap` that each job references via `*bootstrap`
+- Each job that needs profile state now runs the full bootstrap (install + config init + use)
+- Removed separate `setup` stage; stages are now `analyze → generate → test → report`
+- E2E generate step also bootstraps; run-only jobs (run-unit-tests, run-behave-tests, run-e2e-tests, qa-report) that don't call qaagent profile commands just install qaagent directly
+
+#### Issue 4 [MEDIUM]: Plan says `--source-dir` but implementation uses `--source`
+- Added `--source-dir` as a CLI alias for `--source` on the `analyze routes` command
+
+#### Issue 5 [MEDIUM]: Next.js parser not migrated to FrameworkParser
+- Refactored `NextJsRouteDiscoverer` to extend `FrameworkParser`
+- Now uses `_normalize_route()` for consistent `Route.params` shape (`Dict[str, List[dict]]`)
+- Added `parse()` and `find_route_files()` abstract method implementations
+- Registered `"nextjs"` in `get_framework_parser()` factory
+- Updated 4 tests to match new API (`_extract_tag`, `_extract_path_params`, `find_route_files`)
+
+#### Issue 6 [MEDIUM]: Rule disabling not wired through CLI
+- Added `_resolve_disabled_rules(active_profile)` helper to `generate_cmd.py`
+- Threaded `disabled_rules` from `active_profile.risk_assessment.disable_rules` into all 5 `assess_risks()` call sites (1 in `analyze_cmd.py`, 4 in `generate_cmd.py`)
+
+### Test Results
+- 0 new regressions (same 4 pre-existing failures unchanged)
+- All 127+ Phase 4 tests pass
+- Next.js parser tests updated and passing

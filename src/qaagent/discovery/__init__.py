@@ -31,6 +31,7 @@ def get_framework_parser(framework: str) -> FrameworkParser | None:
         "fastapi": FastAPIParser,
         "flask": FlaskParser,
         "django": DjangoParser,
+        "nextjs": NextJsRouteDiscoverer,
     }
     cls = parsers.get(framework)
     return cls() if cls else None

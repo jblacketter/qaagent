@@ -50,11 +50,11 @@ jobs:
         run: qaagent analyze routes --format json --out routes.json
 
       - name: Assess risks
-        run: qaagent analyze strategy --routes routes.json --out strategy.yaml
+        run: qaagent analyze strategy --routes-file routes.json --out strategy.yaml
 {% if suites.unit %}
 
       - name: Generate unit tests
-        run: qaagent generate unit-tests --out generated/unit
+        run: qaagent generate unit-tests --routes-file routes.json --out generated/unit
 
       - name: Run unit tests
         run: python -m pytest generated/unit -q --junitxml=reports/unit.xml
@@ -63,7 +63,7 @@ jobs:
 {% if suites.behave %}
 
       - name: Generate BDD tests
-        run: qaagent generate behave --out generated/behave
+        run: qaagent generate behave --routes-file routes.json --out generated/behave
 
       - name: Run BDD tests
         run: python -m behave generated/behave --junit --junit-directory reports/
@@ -71,14 +71,14 @@ jobs:
 {% endif %}
 {% if suites.e2e %}
 
+      - name: Generate E2E tests
+        run: qaagent generate e2e --routes-file routes.json --out generated/e2e
+
       - name: Install Playwright
         run: |
           cd generated/e2e
           npm install
           npx playwright install --with-deps chromium
-
-      - name: Generate E2E tests
-        run: qaagent generate e2e --out generated/e2e
 
       - name: Run E2E tests
         run: |
@@ -91,7 +91,7 @@ jobs:
 
       - name: Generate report
         if: always()
-        run: qaagent report generate --format html --out reports/qa-report.html
+        run: qaagent report --fmt html --out reports/qa-report.html
         continue-on-error: true
 
       - name: Upload test results

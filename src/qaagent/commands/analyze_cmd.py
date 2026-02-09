@@ -102,7 +102,7 @@ def analyze_collectors_command(
 def analyze_routes(
     openapi: Optional[str] = typer.Option(None, help="Path or URL to OpenAPI/Swagger spec"),
     target: Optional[str] = typer.Option(None, help="Base URL to probe (future enhancement)"),
-    source: Optional[str] = typer.Option(None, help="Path to source code for static analysis"),
+    source: Optional[str] = typer.Option(None, "--source", "--source-dir", help="Path to source code for static analysis"),
     out: str = typer.Option("routes.json", help="Output file for discovered routes"),
     format: str = typer.Option("json", help="Output format: json|yaml|table"),
     verbose: bool = typer.Option(False, "--verbose", help="Include additional metadata when printing"),
@@ -270,7 +270,8 @@ def analyze_strategy(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes)
+        disabled = set(active_profile.risk_assessment.disable_rules) if active_profile else None
+        risks = assess_risks(routes, disabled_rules=disabled)
 
     summary = build_strategy_summary(routes, risks)
 

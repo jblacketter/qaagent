@@ -199,28 +199,29 @@ class TestNextJsRouteDiscoverer:
         """Test tag extraction from paths."""
         discoverer = NextJsRouteDiscoverer(Path("."))
 
-        assert discoverer._extract_tag_from_path("/users") == "users"
-        assert discoverer._extract_tag_from_path("/posts/{id}") == "posts"
-        assert discoverer._extract_tag_from_path("/v1/admin/settings") == "admin"
-        assert discoverer._extract_tag_from_path("/") == "api"
+        assert discoverer._extract_tag("/users") == "users"
+        assert discoverer._extract_tag("/posts/{id}") == "posts"
+        assert discoverer._extract_tag("/v1/admin/settings") == "admin"
+        assert discoverer._extract_tag("/") == "api"
 
     def test_extract_params_from_path(self) -> None:
         """Test parameter extraction from paths."""
         discoverer = NextJsRouteDiscoverer(Path("."))
 
         # Single param
-        params = discoverer._extract_params_from_path("/users/{id}")
-        assert "id" in params
-        assert params["id"]["in"] == "path"
-        assert params["id"]["required"] is True
+        params = discoverer._extract_path_params("/users/{id}")
+        assert len(params) == 1
+        assert params[0].name == "id"
+        assert params[0].required is True
 
         # Multiple params
-        params = discoverer._extract_params_from_path("/users/{userId}/posts/{postId}")
-        assert "userId" in params
-        assert "postId" in params
+        params = discoverer._extract_path_params("/users/{userId}/posts/{postId}")
+        names = {p.name for p in params}
+        assert "userId" in names
+        assert "postId" in names
 
         # No params
-        params = discoverer._extract_params_from_path("/health")
+        params = discoverer._extract_path_params("/health")
         assert len(params) == 0
 
     def test_find_route_files_src_structure(self, tmp_path: Path) -> None:
@@ -237,7 +238,7 @@ class TestNextJsRouteDiscoverer:
         (api_dir / "posts" / "route.ts").write_text("export function GET() {}")
 
         discoverer = NextJsRouteDiscoverer(tmp_path)
-        route_files = discoverer._find_route_files()
+        route_files = discoverer.find_route_files(tmp_path)
 
         assert len(route_files) == 2
         assert any("users" in str(f) for f in route_files)
@@ -254,7 +255,7 @@ class TestNextJsRouteDiscoverer:
         (api_dir / "health" / "route.ts").write_text("export function GET() {}")
 
         discoverer = NextJsRouteDiscoverer(tmp_path)
-        route_files = discoverer._find_route_files()
+        route_files = discoverer.find_route_files(tmp_path)
 
         assert len(route_files) == 1
         assert "health" in str(route_files[0])

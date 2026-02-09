@@ -29,6 +29,13 @@ def _resolve_llm_settings(active_profile) -> Optional[LLMSettings]:
     return None
 
 
+def _resolve_disabled_rules(active_profile) -> Optional[set]:
+    """Extract disabled rules from active profile."""
+    if active_profile and active_profile.risk_assessment.disable_rules:
+        return set(active_profile.risk_assessment.disable_rules)
+    return None
+
+
 def _print_generation_result(result, label: str) -> None:
     """Print a GenerationResult summary."""
     if isinstance(result, GenerationResult):
@@ -89,7 +96,7 @@ def generate_behave(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes)
+        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
 
     resolved_base_url = (
         base_url
@@ -171,7 +178,7 @@ def generate_unit_tests(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes)
+        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
 
     # Resolve base URL
     resolved_base_url = (
@@ -317,7 +324,7 @@ def generate_e2e(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes)
+        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
 
     # Resolve base URL
     resolved_base_url = (
@@ -427,7 +434,7 @@ def generate_all(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes)
+        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
 
     # Resolve base URL
     resolved_base_url = (

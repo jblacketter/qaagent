@@ -8,7 +8,6 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 stages:
-  - setup
   - analyze
   - generate
   - test
@@ -18,26 +17,20 @@ cache:
   paths:
     - .cache/pip
 
-# Bootstrap qaagent profile for CI
-setup:
-  stage: setup
-  image: python:${PYTHON_VERSION}
-  script:
-    - pip install qaagent
+# Shared bootstrap script — each job re-installs since GitLab jobs run in isolated containers
+.bootstrap: &bootstrap
+  - pip install qaagent
 {% if framework in ("fastapi", "flask", "django") %}
-    - pip install -r requirements.txt
+  - pip install -r requirements.txt
 {% endif %}
-    - qaagent config init . --template {{ framework }} --name {{ project_name }}
-    - qaagent use {{ project_name }}
-  artifacts:
-    paths:
-      - .qaagent.yaml
+  - qaagent config init . --template {{ framework }} --name {{ project_name }}
+  - qaagent use {{ project_name }}
 
 discover-routes:
   stage: analyze
   image: python:${PYTHON_VERSION}
   script:
-    - pip install qaagent
+    - *bootstrap
     - qaagent analyze routes --format json --out routes.json
   artifacts:
     paths:
@@ -49,8 +42,8 @@ assess-risks:
   needs:
     - discover-routes
   script:
-    - pip install qaagent
-    - qaagent analyze strategy --routes routes.json --out strategy.yaml
+    - *bootstrap
+    - qaagent analyze strategy --routes-file routes.json --out strategy.yaml
   artifacts:
     paths:
       - strategy.yaml
@@ -62,8 +55,8 @@ generate-unit-tests:
   needs:
     - discover-routes
   script:
-    - pip install qaagent
-    - qaagent generate unit-tests --out generated/unit
+    - *bootstrap
+    - qaagent generate unit-tests --routes-file routes.json --out generated/unit
   artifacts:
     paths:
       - generated/unit
@@ -92,8 +85,8 @@ generate-behave-tests:
   needs:
     - discover-routes
   script:
-    - pip install qaagent
-    - qaagent generate behave --out generated/behave
+    - *bootstrap
+    - qaagent generate behave --routes-file routes.json --out generated/behave
   artifacts:
     paths:
       - generated/behave
@@ -122,8 +115,8 @@ generate-e2e-tests:
   needs:
     - discover-routes
   script:
-    - pip install qaagent
-    - qaagent generate e2e --out generated/e2e
+    - *bootstrap
+    - qaagent generate e2e --routes-file routes.json --out generated/e2e
   artifacts:
     paths:
       - generated/e2e
@@ -152,7 +145,7 @@ qa-report:
   when: always
   script:
     - pip install qaagent
-    - qaagent report generate --format html --out reports/qa-report.html
+    - qaagent report --fmt html --out reports/qa-report.html
   artifacts:
     paths:
       - reports/qa-report.html

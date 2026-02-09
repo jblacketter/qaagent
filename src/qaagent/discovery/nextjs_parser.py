@@ -16,17 +16,29 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from qaagent.analyzers.models import Route
 
+from .base import FrameworkParser, RouteParam
 
-class NextJsRouteDiscoverer:
+
+class NextJsRouteDiscoverer(FrameworkParser):
     """Discovers API routes from Next.js App Router source code."""
 
-    def __init__(self, project_root: Path):
-        self.project_root = Path(project_root)
-        self.routes: List[Route] = []
+    framework_name = "nextjs"
+
+    def __init__(self, project_root: Path | None = None):
+        self.project_root: Path | None = Path(project_root) if project_root else None
+
+    def parse(self, source_dir: Path) -> List[Route]:
+        """Parse source directory and return discovered routes."""
+        self.project_root = Path(source_dir)
+        return self.discover()
+
+    def find_route_files(self, source_dir: Path) -> List[Path]:
+        """Find all route.ts and route.js files in the project."""
+        return self._find_route_files_impl(Path(source_dir))
 
     def discover(self) -> List[Route]:
         """
@@ -35,19 +47,18 @@ class NextJsRouteDiscoverer:
         Returns:
             List of Route objects discovered from source code
         """
-        self.routes = []
+        if self.project_root is None:
+            return []
 
-        # Find all route files
-        route_files = self._find_route_files()
+        routes: List[Route] = []
+        route_files = self._find_route_files_impl(self.project_root)
 
-        # Parse each route file
         for route_file in route_files:
-            routes = self._parse_route_file(route_file)
-            self.routes.extend(routes)
+            routes.extend(self._parse_route_file(route_file))
 
-        return self.routes
+        return routes
 
-    def _find_route_files(self) -> List[Path]:
+    def _find_route_files_impl(self, project_root: Path) -> List[Path]:
         """
         Find all route.ts and route.js files in the project.
 
@@ -58,13 +69,13 @@ class NextJsRouteDiscoverer:
         route_files = []
 
         # Check src/app/api first
-        src_app_api = self.project_root / "src" / "app" / "api"
+        src_app_api = project_root / "src" / "app" / "api"
         if src_app_api.exists():
             route_files.extend(src_app_api.rglob("route.ts"))
             route_files.extend(src_app_api.rglob("route.js"))
 
         # Check app/api (root level)
-        app_api = self.project_root / "app" / "api"
+        app_api = project_root / "app" / "api"
         if app_api.exists():
             route_files.extend(app_api.rglob("route.ts"))
             route_files.extend(app_api.rglob("route.js"))
@@ -94,19 +105,21 @@ class NextJsRouteDiscoverer:
         # Find HTTP method handlers
         methods = self._extract_http_methods(content)
 
-        # Create Route object for each method
+        # Extract path params using FrameworkParser's normalization
+        path_params = self._extract_path_params(api_path)
+
+        # Create Route object for each method using _normalize_route
         for method in methods:
-            route = Route(
+            route = self._normalize_route(
                 path=api_path,
                 method=method,
+                params={"path": path_params} if path_params else {},
                 auth_required=self._detect_auth(content),
                 summary=f"{method} {api_path}",
-                tags=[self._extract_tag_from_path(api_path)],
-                params=self._extract_params_from_path(api_path),
-                responses={"200": {"description": "Success"}},
+                tags=[self._extract_tag(api_path)],
                 metadata={
                     "source": "nextjs",
-                    "file": str(route_file.relative_to(self.project_root)),
+                    "file": str(route_file.relative_to(self.project_root)) if self.project_root else str(route_file),
                 },
             )
             routes.append(route)
@@ -118,10 +131,10 @@ class NextJsRouteDiscoverer:
         Infer API path from directory structure.
 
         Examples:
-        - src/app/api/users/route.ts → /users
-        - src/app/api/posts/[id]/route.ts → /posts/{id}
-        - src/app/api/v1/admin/route.ts → /v1/admin
-        - app/api/posts/[slug]/comments/route.ts → /posts/{slug}/comments
+        - src/app/api/users/route.ts -> /users
+        - src/app/api/posts/[id]/route.ts -> /posts/{id}
+        - src/app/api/v1/admin/route.ts -> /v1/admin
+        - app/api/posts/[slug]/comments/route.ts -> /posts/{slug}/comments
         """
         # Find the 'api' directory in the path
         parts = route_file.parts
@@ -146,7 +159,7 @@ class NextJsRouteDiscoverer:
             if part.startswith("@"):
                 continue
 
-            # Convert dynamic segments [param] → {param}
+            # Convert dynamic segments [param] -> {param}
             if part.startswith("[") and part.endswith("]"):
                 param_name = part[1:-1]
                 # Handle catch-all routes [...param]
@@ -215,48 +228,12 @@ class NextJsRouteDiscoverer:
 
         return False
 
-    def _extract_tag_from_path(self, path: str) -> str:
-        """
-        Extract tag from API path for grouping.
-
-        Examples:
-        - /users → users
-        - /posts/{id} → posts
-        - /v1/admin/users → admin
-        """
-        # Remove leading slash and split
-        parts = [p for p in path.split("/") if p and not p.startswith("{")]
-
-        if not parts:
-            return "api"
-
-        # Use first non-version part as tag
-        for part in parts:
-            if not re.match(r"^v\d+$", part):  # Skip version parts like v1, v2
-                return part
-
-        return parts[0]
-
-    def _extract_params_from_path(self, path: str) -> dict:
-        """
-        Extract path parameters from route path.
-
-        Examples:
-        - /users/{id} → {"id": {"in": "path", "type": "string"}}
-        - /posts/{slug}/comments → {"slug": {"in": "path", "type": "string"}}
-        """
-        params = {}
-
-        # Find all {param} segments
+    @staticmethod
+    def _extract_path_params(path: str) -> List[RouteParam]:
+        """Extract path parameters from route path as RouteParam objects."""
+        params = []
         param_pattern = r"\{([^}]+)\}"
         matches = re.findall(param_pattern, path)
-
         for param_name in matches:
-            params[param_name] = {
-                "in": "path",
-                "type": "string",
-                "required": True,
-                "description": f"Path parameter: {param_name}",
-            }
-
+            params.append(RouteParam(name=param_name, type="string", required=True))
         return params
