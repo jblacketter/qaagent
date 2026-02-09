@@ -57,6 +57,11 @@ Thumbs.db
 
 # Temporary
 tmp/
+.tmp/
 temp/
 *.tmp
 *.log
+
+# Development artifacts
+handoff-state.json
+ai-handoff.yaml
