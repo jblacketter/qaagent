@@ -172,16 +172,16 @@ class TestUnitTestGenerator:
         result = generator.generate(output_dir=tmp_path)
 
         # Check that files were created
-        assert "test_pets" in result
-        assert "test_health" in result
-        assert "conftest" in result
-        assert "init" in result
+        assert "test_pets" in result.files
+        assert "test_health" in result.files
+        assert "conftest" in result.files
+        assert "init" in result.files
 
         # Verify files exist
-        assert result["test_pets"].exists()
-        assert result["test_health"].exists()
-        assert result["conftest"].exists()
-        assert result["init"].exists()
+        assert result.files["test_pets"].exists()
+        assert result.files["test_health"].exists()
+        assert result.files["conftest"].exists()
+        assert result.files["init"].exists()
 
     def test_generate_test_file_content(self, tmp_path: Path) -> None:
         """Test that generated test files have valid Python content."""
@@ -189,7 +189,7 @@ class TestUnitTestGenerator:
         generator = UnitTestGenerator(routes=routes)
 
         result = generator.generate(output_dir=tmp_path)
-        test_file = result["test_pets"]
+        test_file = result.files["test_pets"]
 
         content = test_file.read_text()
 
@@ -204,7 +204,7 @@ class TestUnitTestGenerator:
         generator = UnitTestGenerator(routes=routes)
 
         result = generator.generate(output_dir=tmp_path)
-        conftest = result["conftest"]
+        conftest = result.files["conftest"]
 
         content = conftest.read_text()
 
@@ -238,12 +238,12 @@ class TestUnitTestGenerator:
         result = generator.generate(output_dir=tmp_path)
 
         # Should create test files for each resource
-        assert "test_pets" in result
-        assert "test_owners" in result
-        assert "test_health" in result
+        assert "test_pets" in result.files
+        assert "test_owners" in result.files
+        assert "test_health" in result.files
 
         # All files should exist
-        for key, path in result.items():
+        for key, path in result.files.items():
             assert path.exists(), f"{key} file should exist"
 
     def test_generate_test_data_basic(self) -> None:
@@ -266,7 +266,7 @@ class TestUnitTestGenerator:
         generator = UnitTestGenerator(routes=routes)
 
         result = generator.generate(output_dir=tmp_path)
-        test_file = result["test_pets"]
+        test_file = result.files["test_pets"]
 
         content = test_file.read_text()
 
@@ -274,3 +274,37 @@ class TestUnitTestGenerator:
         assert "get" in content.lower()
         assert "post" in content.lower()
         assert "put" in content.lower()
+
+    def test_happy_path_uses_concrete_sample_path(self, tmp_path: Path) -> None:
+        """Test that happy-path tests use concrete sample paths, not literal {pet_id}."""
+        routes = [sample_route(path="/pets/{pet_id}", method="GET")]
+        generator = UnitTestGenerator(routes=routes)
+
+        result = generator.generate(output_dir=tmp_path)
+        content = result.files["test_pets"].read_text()
+
+        # Should use concrete value like /pets/1 in the API call
+        assert 'api_client.get("/pets/1")' in content
+
+    def test_resolve_sample_path(self) -> None:
+        """Test _resolve_sample_path replaces params with concrete values."""
+        assert UnitTestGenerator._resolve_sample_path("/pets/{pet_id}") == "/pets/1"
+        assert UnitTestGenerator._resolve_sample_path("/users/{user_id}/posts/{post_id}") == "/users/1/posts/1"
+        assert UnitTestGenerator._resolve_sample_path("/pets") == "/pets"
+
+    def test_normalize_edge_cases_flattens_dicts(self) -> None:
+        """Test that LLM-returned edge case dicts are flattened to scalar values."""
+        llm_cases = [
+            {"name": "negative_id", "params": {"id": -1}, "expected_status": 404, "description": "Negative ID"},
+            {"name": "zero_id", "params": {"id": 0}, "expected_status": 404, "description": "Zero ID"},
+            {"name": "string_id", "params": {"id": "invalid"}, "expected_status": 422, "description": "Non-numeric"},
+        ]
+        result = UnitTestGenerator._normalize_edge_cases(llm_cases)
+
+        assert result == [-1, 0, "invalid"]
+
+    def test_normalize_edge_cases_preserves_scalars(self) -> None:
+        """Test that already-scalar values pass through normalization unchanged."""
+        scalar_cases = [-1, 0, "invalid", None, ""]
+        result = UnitTestGenerator._normalize_edge_cases(scalar_cases)
+        assert result == [-1, 0, "invalid", None, ""]

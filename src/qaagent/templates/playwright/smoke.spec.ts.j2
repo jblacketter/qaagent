@@ -1,0 +1,12 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('UI Smoke Tests', () => {
+{% for route in ui_routes %}
+  test('{{ route.method }} {{ route.path }} loads successfully', async ({ page }) => {
+    const response = await page.goto('{{ route.path }}');
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page).not.toHaveTitle(/error|404|500/i);
+  });
+
+{% endfor %}
+});

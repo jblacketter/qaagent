@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="smoke.spec.ts" tests="3" failures="1" skipped="0" time="2.500">
+    <testcase classname="smoke" name="should load homepage" time="0.800" />
+    <testcase classname="smoke" name="should load about page" time="0.700" />
+    <testcase classname="smoke" name="should load dashboard" time="1.000">
+      <failure message="Timeout exceeded">Error: Timeout 30000ms exceeded.
+waiting for selector 'h1'</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

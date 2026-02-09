@@ -205,6 +205,11 @@ class TestRecord:
     kind: str
     name: str
     status: str
+    suite_name: Optional[str] = None
+    runner_type: Optional[str] = None
+    duration: Optional[float] = None
+    route: Optional[str] = None
+    error_message: Optional[str] = None
     last_run: Optional[str] = None
     evidence_refs: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)

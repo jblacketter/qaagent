@@ -1,0 +1,45 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    ['html'],
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
+  use: {
+    baseURL: process.env.BASE_URL || '{{ base_url }}',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+{% if auth_setup %}
+  projects: [
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+{% for bd in browser_devices %}
+    {
+      name: '{{ bd.name }}',
+      use: {
+        ...devices['{{ bd.device }}'],
+        storageState: '.auth/state.json',
+      },
+      dependencies: ['setup'],
+    },
+{% endfor %}
+  ],
+{% else %}
+  projects: [
+{% for bd in browser_devices %}
+    {
+      name: '{{ bd.name }}',
+      use: { ...devices['{{ bd.device }}'] },
+    },
+{% endfor %}
+  ],
+{% endif %}
+});

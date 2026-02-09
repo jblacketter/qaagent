@@ -24,17 +24,22 @@ def run_command(
     cwd: Optional[Path] = None,
     tail: int = 5000,
     env: Optional[dict] = None,
+    timeout: Optional[int] = None,
 ) -> CmdResult:
     proc_env = os.environ.copy()
     if env:
         proc_env.update(env)
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-        env=proc_env,
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd) if cwd else None,
+            capture_output=True,
+            text=True,
+            env=proc_env,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return CmdResult(-1, "", f"Command timed out after {timeout}s")
     stdout = proc.stdout[-tail:] if proc.stdout else ""
     stderr = proc.stderr[-tail:] if proc.stderr else ""
     return CmdResult(proc.returncode, stdout, stderr)

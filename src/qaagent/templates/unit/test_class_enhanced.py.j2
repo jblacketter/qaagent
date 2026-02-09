@@ -21,7 +21,7 @@ class Test{{ resource_name|title }}API:
         test_data = sample_{{ resource_name }}_data
 
         # Act
-        response = api_client.{{ case.route.method.lower() }}("{{ case.route.path }}", json=test_data)
+        response = api_client.{{ case.route.method.lower() }}("{{ case.sample_path }}", json=test_data)
 
         # Assert - Enhanced assertions
         assert response.status_code == {{ case.expected_status }}, f"Expected {{ case.expected_status }}, got {response.status_code}: {response.text}"
@@ -44,7 +44,7 @@ class Test{{ resource_name|title }}API:
         {% endif %}
         {% elif case.route.method == "GET" %}
         # Act
-        response = api_client.{{ case.route.method.lower() }}("{{ case.route.path }}")
+        response = api_client.{{ case.route.method.lower() }}("{{ case.sample_path }}")
 
         # Assert
         assert response.status_code == {{ case.expected_status }}, f"Expected {{ case.expected_status }}, got {response.status_code}"
@@ -63,7 +63,7 @@ class Test{{ resource_name|title }}API:
         {% endif %}
         {% elif case.route.method == "DELETE" %}
         # Act
-        response = api_client.{{ case.route.method.lower() }}("{{ case.route.path }}")
+        response = api_client.{{ case.route.method.lower() }}("{{ case.sample_path }}")
 
         # Assert
         assert response.status_code in [{{ case.expected_status }}, 200], "Delete should return 204 or 200"

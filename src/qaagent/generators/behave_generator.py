@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..analyzers.models import Risk, RiskCategory, RiskSeverity, Route
+from ..config.models import LLMSettings
+from .base import BaseGenerator, GenerationResult
+from .validator import TestValidator
 
 _TEMPLATE_ROOT = Path(__file__).resolve().parent.parent / "templates" / "behave"
 
@@ -22,7 +25,7 @@ class Scenario:
     comments: List[str]
 
 
-class BehaveGenerator:
+class BehaveGenerator(BaseGenerator):
     """Generate Behave feature files and supporting assets."""
 
     def __init__(
@@ -32,28 +35,43 @@ class BehaveGenerator:
         output_dir: Path,
         base_url: Optional[str] = None,
         project_name: str = "Application",
+        llm_settings: Optional[LLMSettings] = None,
     ) -> None:
-        self.routes = list(routes)
-        self.risks = list(risks)
-        self.output_dir = output_dir
-        self.base_url = base_url or "http://localhost:8000"
-        self.project_name = project_name
+        super().__init__(
+            routes=list(routes),
+            risks=list(risks),
+            output_dir=output_dir,
+            base_url=base_url or "http://localhost:8000",
+            project_name=project_name,
+            llm_settings=llm_settings,
+        )
         self._env = Environment(
             loader=FileSystemLoader(str(_TEMPLATE_ROOT.parent)),
             autoescape=select_autoescape(disabled_extensions=(".j2",)),
             trim_blocks=True,
             lstrip_blocks=True,
         )
+        self._enhancer = None
+        self._validator = TestValidator()
 
-    def generate(self) -> Dict[str, Path]:
+    def _get_enhancer(self):
+        """Lazy-init LLM enhancer."""
+        if self._enhancer is None and self.llm_enabled:
+            from .llm_enhancer import LLMTestEnhancer
+            self._enhancer = LLMTestEnhancer(self.llm_settings)
+        return self._enhancer
+
+    def generate(self, **kwargs) -> GenerationResult:
         features_dir = self.output_dir / "features"
         steps_dir = self.output_dir / "steps"
         features_dir.mkdir(parents=True, exist_ok=True)
         steps_dir.mkdir(parents=True, exist_ok=True)
 
+        result = GenerationResult()
+        scenario_count = 0
+
         feature_map = self._build_feature_map()
         feature_template = self._env.get_template("behave/feature.j2")
-        outputs: Dict[str, Path] = {}
         for resource, payload in feature_map.items():
             feature_path = features_dir / f"{resource}.feature"
             feature_content = feature_template.render(
@@ -63,27 +81,40 @@ class BehaveGenerator:
                 base_url=self.base_url,
                 scenarios=payload["scenarios"],
             )
+            # Validate Gherkin structure
+            vr = self._validator.validate_gherkin(feature_content)
+            if not vr.valid:
+                result.warnings.append(f"{resource}.feature: {'; '.join(vr.errors)}")
+
             feature_path.write_text(feature_content, encoding="utf-8")
-            outputs[f"feature:{resource}"] = feature_path
+            result.files[f"feature:{resource}"] = feature_path
+            scenario_count += len(payload["scenarios"])
 
         steps_template = self._env.get_template("behave/steps.py.j2")
         steps_path = steps_dir / "auto_steps.py"
         steps_path.write_text(steps_template.render(), encoding="utf-8")
-        outputs["steps"] = steps_path
+        result.files["steps"] = steps_path
 
         environment_template = self._env.get_template("behave/environment.py.j2")
         environment_path = self.output_dir / "environment.py"
         environment_path.write_text(
             environment_template.render(base_url=self.base_url), encoding="utf-8"
         )
-        outputs["environment"] = environment_path
+        result.files["environment"] = environment_path
 
         behave_ini_template = self._env.get_template("behave/behave.ini.j2")
         behave_ini_path = self.output_dir / "behave.ini"
         behave_ini_path.write_text(behave_ini_template.render(), encoding="utf-8")
-        outputs["behave_ini"] = behave_ini_path
+        result.files["behave_ini"] = behave_ini_path
 
-        return outputs
+        result.stats = {
+            "tests": scenario_count,
+            "files": len(result.files),
+            "features": len(feature_map),
+        }
+        result.llm_used = self.llm_enabled and self._enhancer is not None
+
+        return result
 
     # Internal helpers -------------------------------------------------
 
@@ -150,8 +181,15 @@ class BehaveGenerator:
         given = ["I have API access"]
         then_steps = [f"the response status should be {status}"]
         comments = []
-        if status >= 200 and status < 300:
+
+        # LLM-enhanced: add response body assertions instead of TODO
+        enhancer = self._get_enhancer()
+        if enhancer and status >= 200 and status < 300:
+            body_steps = enhancer.generate_response_assertions(route)
+            then_steps.extend(body_steps)
+        elif status >= 200 and status < 300:
             comments.append("TODO: assert response body structure")
+
         return Scenario(
             title=f"{route.method} {route.path} succeeds",
             tags=tags,
@@ -165,38 +203,59 @@ class BehaveGenerator:
     def _scenario_from_risk(self, route: Route, risk: Risk) -> Optional[Scenario]:
         severity_tag = risk.severity.value
         base_tags = [risk.category.value, severity_tag]
+
+        # LLM-enhanced: generate real step definitions instead of TODO comments
+        enhancer = self._get_enhancer()
+
         if risk.category == RiskCategory.SECURITY:
             expected_status = 401 if route.method in {"POST", "PUT", "DELETE"} else 403
-            comments = ["TODO: verify error response schema"]
+            if enhancer:
+                then_steps = enhancer.generate_step_definitions(route, risk)
+                if not any(str(expected_status) in s for s in then_steps):
+                    then_steps.insert(0, f"the response status should be {expected_status}")
+                comments = []
+            else:
+                then_steps = [f"the response status should be {expected_status}"]
+                comments = ["TODO: verify error response schema"]
             return Scenario(
                 title=f"Block unauthenticated access to {route.method} {route.path}",
                 tags=base_tags,
                 given=["I am not authenticated"],
                 when_method=route.method,
                 when_path=route.path,
-                then=[f"the response status should be {expected_status}"],
+                then=then_steps,
                 comments=comments,
             )
         if risk.category == RiskCategory.PERFORMANCE:
-            comments = ["TODO: verify pagination headers or response fields"]
+            if enhancer:
+                then_steps = enhancer.generate_step_definitions(route, risk)
+                comments = []
+            else:
+                then_steps = ["the response status should be 200"]
+                comments = ["TODO: verify pagination headers or response fields"]
             return Scenario(
                 title=f"Ensure pagination is implemented for {route.path}",
                 tags=base_tags,
                 given=["I have API access"],
                 when_method=route.method,
                 when_path=route.path,
-                then=["the response status should be 200"],
+                then=then_steps,
                 comments=comments,
             )
         if risk.category == RiskCategory.RELIABILITY:
-            comments = ["TODO: confirm deprecated endpoints are replaced"]
+            if enhancer:
+                then_steps = enhancer.generate_step_definitions(route, risk)
+                comments = []
+            else:
+                then_steps = []
+                comments = ["TODO: confirm deprecated endpoints are replaced"]
             return Scenario(
                 title=f"Document deprecation for {route.method} {route.path}",
                 tags=base_tags,
                 given=["I have API access"],
                 when_method=route.method,
                 when_path=route.path,
-                then=[],
+                then=then_steps,
                 comments=comments,
             )
         return None

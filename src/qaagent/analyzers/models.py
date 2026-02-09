@@ -1,8 +1,14 @@
+"""Data models for route discovery, risk assessment, and strategy generation.
+
+These models use Pydantic BaseModel for validation, serialization, and JSON schema generation.
+Backward-compatible to_dict() and from_dict() methods are provided for existing callers.
+"""
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, computed_field
 
 
 class RouteSource(str, Enum):
@@ -14,8 +20,7 @@ class RouteSource(str, Enum):
     MANUAL = "manual"
 
 
-@dataclass
-class Route:
+class Route(BaseModel):
     """Normalized representation of an API or UI route."""
 
     path: str
@@ -23,33 +28,23 @@ class Route:
     auth_required: bool
     summary: Optional[str] = None
     description: Optional[str] = None
-    tags: List[str] = field(default_factory=list)
-    params: Dict[str, Any] = field(default_factory=dict)
-    responses: Dict[str, Any] = field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
+    params: Dict[str, Any] = Field(default_factory=dict)
+    responses: Dict[str, Any] = Field(default_factory=dict)
     source: RouteSource = RouteSource.OPENAPI
     confidence: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        data = asdict(self)
+        """Serialize to dict with enum values as strings (backward compat)."""
+        data = self.model_dump()
         data["source"] = self.source.value
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Route":
-        return cls(
-            path=data["path"],
-            method=data["method"],
-            auth_required=data.get("auth_required", False),
-            summary=data.get("summary"),
-            description=data.get("description"),
-            tags=list(data.get("tags", []) or []),
-            params=dict(data.get("params", {}) or {}),
-            responses=dict(data.get("responses", {}) or {}),
-            source=RouteSource(data.get("source", RouteSource.OPENAPI.value)),
-            confidence=float(data.get("confidence", 1.0)),
-            metadata=dict(data.get("metadata", {}) or {}),
-        )
+    def from_dict(cls, data: Dict[str, Any]) -> Route:
+        """Deserialize from dict (backward compat)."""
+        return cls.model_validate(data)
 
 
 class RiskCategory(str, Enum):
@@ -76,26 +71,29 @@ SEVERITY_SCORES: Dict[RiskSeverity, int] = {
 }
 
 
-@dataclass
-class Risk:
+class Risk(BaseModel):
     """Represents a discovered risk with optional references."""
 
     category: RiskCategory
     severity: RiskSeverity
-    route: Optional[str]
+    route: Optional[str] = None
     title: str
     description: str
     recommendation: str
     source: str = "rule"
     cwe_id: Optional[str] = None
     owasp_top_10: Optional[str] = None
-    references: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    references: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    @computed_field
+    @property
     def score(self) -> int:
+        """Numeric score derived from severity."""
         return SEVERITY_SCORES.get(self.severity, 0)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize to dict with enum values as strings (backward compat)."""
         return {
             "category": self.category.value,
             "severity": self.severity.value,
@@ -108,22 +106,22 @@ class Risk:
             "owasp_top_10": self.owasp_top_10,
             "references": list(self.references),
             "metadata": dict(self.metadata),
-            "score": self.score(),
+            "score": self.score,
         }
 
 
-@dataclass
-class StrategySummary:
+class StrategySummary(BaseModel):
     """Aggregate view of the generated strategy for reporting."""
 
     total_routes: int
     critical_routes: int
-    risks: List[Risk] = field(default_factory=list)
-    recommended_tests: Dict[str, Any] = field(default_factory=dict)
-    priorities: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    risks: List[Risk] = Field(default_factory=list)
+    recommended_tests: Dict[str, Any] = Field(default_factory=dict)
+    priorities: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize to dict (backward compat)."""
         return {
             "total_routes": self.total_routes,
             "critical_routes": self.critical_routes,

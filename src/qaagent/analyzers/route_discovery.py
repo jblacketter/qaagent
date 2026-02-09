@@ -15,6 +15,13 @@ try:
 except ImportError:
     NEXTJS_AVAILABLE = False
 
+try:
+    from ..discovery import get_framework_parser
+
+    FRAMEWORK_PARSERS_AVAILABLE = True
+except ImportError:
+    FRAMEWORK_PARSERS_AVAILABLE = False
+
 
 def _load_spec(path: str | Path) -> Dict:
     return load_openapi(str(path))
@@ -171,6 +178,43 @@ def discover_from_nextjs(project_root: str | Path) -> List[Route]:
         return []
 
 
+def discover_from_source(source_dir: str | Path, framework: Optional[str] = None) -> List[Route]:
+    """Discover routes from Python framework source code.
+
+    Args:
+        source_dir: Path to source code directory
+        framework: Framework name ("fastapi", "flask", "django"). Auto-detected if not provided.
+
+    Returns:
+        List of discovered Route objects
+    """
+    if not FRAMEWORK_PARSERS_AVAILABLE:
+        return []
+
+    source_path = Path(source_dir)
+    if not source_path.exists():
+        return []
+
+    # Auto-detect framework if not specified
+    if not framework:
+        from ..repo.validator import RepoValidator
+
+        validator = RepoValidator(source_path)
+        framework = validator.detect_project_type()
+
+    if not framework or framework in ("nextjs", "express"):
+        return []
+
+    parser = get_framework_parser(framework)
+    if parser is None:
+        return []
+
+    try:
+        return parser.parse(source_path)
+    except Exception:
+        return []
+
+
 def discover_routes(
     target: Optional[str] = None,
     openapi_path: Optional[str | Path] = None,
@@ -200,10 +244,12 @@ def discover_routes(
         if nextjs_routes:
             routes.extend(nextjs_routes)
 
-    # Stubs for future enhancements
-    if source_path and not auto_discover_nextjs:
-        # Placeholder for FastAPI/Flask/Django analysis
-        pass
+    # Auto-discover Python framework routes
+    if source_path and not _is_nextjs_project(Path(source_path)):
+        source_routes = discover_from_source(source_path)
+        if source_routes:
+            routes.extend(source_routes)
+
     if target:
         # Placeholder for runtime crawling
         pass

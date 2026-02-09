@@ -1,0 +1,35 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('API Tests: {{ resource_name }}', () => {
+{% for route in routes %}
+  test('{{ route.method }} {{ route.path }} returns success', async ({ request }) => {
+{% if route.method == 'GET' %}
+    const response = await request.get('{{ route.path }}');
+    expect(response.status()).toBeLessThan(400);
+    expect(response.headers()['content-type']).toContain('application/json');
+{% elif route.method == 'POST' %}
+    const response = await request.post('{{ route.path }}', {
+      data: {},
+    });
+    expect(response.status()).toBeLessThan(500);
+{% elif route.method == 'PUT' %}
+    const response = await request.put('{{ route.path }}', {
+      data: {},
+    });
+    expect(response.status()).toBeLessThan(500);
+{% elif route.method == 'PATCH' %}
+    const response = await request.patch('{{ route.path }}', {
+      data: {},
+    });
+    expect(response.status()).toBeLessThan(500);
+{% elif route.method == 'DELETE' %}
+    const response = await request.delete('{{ route.path }}');
+    expect(response.status()).toBeLessThan(500);
+{% else %}
+    const response = await request.get('{{ route.path }}');
+    expect(response.status()).toBeLessThan(500);
+{% endif %}
+  });
+
+{% endfor %}
+});

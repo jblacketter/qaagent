@@ -1,5 +1,10 @@
-"""Command helpers for qaagent CLI."""
+"""QA Agent CLI command assembly.
 
+Creates the main Typer app and registers all subcommands from command modules.
+"""
+import typer
+
+# Backward-compat re-exports from analyze helpers (used by mcp_server and other code)
 from .analyze import (
     run_collectors,
     ensure_risks,
@@ -7,4 +12,40 @@ from .analyze import (
     ensure_run_handle,
 )
 
-__all__ = ["run_collectors", "ensure_risks", "ensure_recommendations", "ensure_run_handle"]
+# Create main app
+app = typer.Typer(help="QA Agent CLI: analyze, test, and expose tools via MCP")
+
+# Import subapps
+from .analyze_cmd import analyze_app
+from .config_cmd import config_app
+from .targets_cmd import targets_app, use_target
+from .generate_cmd import generate_app
+from .workspace_cmd import workspace_app
+
+# Register subgroups
+app.add_typer(analyze_app, name="analyze")
+app.add_typer(config_app, name="config")
+app.add_typer(targets_app, name="targets")
+config_app.add_typer(targets_app, name="targets")
+app.add_typer(generate_app, name="generate")
+app.add_typer(workspace_app, name="workspace")
+
+# Dual-registered commands (available both as top-level and within subgroups)
+app.command("use")(use_target)
+
+# Register top-level commands from modules
+from . import run_cmd
+from . import report_cmd
+from . import misc_cmd
+
+run_cmd.register(app)
+report_cmd.register(app)
+misc_cmd.register(app)
+
+__all__ = [
+    "app",
+    "run_collectors",
+    "ensure_risks",
+    "ensure_recommendations",
+    "ensure_run_handle",
+]

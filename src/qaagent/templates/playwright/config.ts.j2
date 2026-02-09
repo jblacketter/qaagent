@@ -1,0 +1,6 @@
+export const config = {
+  baseUrl: process.env.BASE_URL || '{{ base_url }}',
+{% if auth_setup %}
+  loginUrl: process.env.LOGIN_URL || '/login',
+{% endif %}
+};

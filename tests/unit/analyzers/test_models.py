@@ -48,7 +48,8 @@ def test_risk_to_dict_contains_score_and_references() -> None:
     data = risk.to_dict()
     assert data["category"] == "security"
     assert data["severity"] == "high"
-    assert data["score"] == RiskSeverity.HIGH and data["score"] == risk.score()
+    assert data["score"] == 4
+    assert data["score"] == risk.score
     assert data["cwe_id"] == "CWE-306"
     assert "references" in data and len(data["references"]) == 1
 

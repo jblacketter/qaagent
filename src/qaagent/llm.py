@@ -1,50 +1,166 @@
+"""LLM client for qaagent — multi-provider via litellm.
+
+LLMClient is the ONLY place that imports litellm. All qaagent code should use
+LLMClient or the module-level convenience functions (chat, llm_available, etc.).
+"""
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+
+from pydantic import BaseModel, Field
 
 from .openapi_utils import enumerate_operations
 
 
-def _import_ollama():
-    try:
-        import ollama  # type: ignore
-
-        return ollama
-    except Exception:
-        return None
+class ChatMessage(BaseModel):
+    """A chat message with role and content."""
+    role: str  # "system" | "user" | "assistant"
+    content: str
 
 
-@dataclass
-class LLMConfig:
-    provider: str = os.environ.get("QAAGENT_LLM", "ollama")
-    model: str = os.environ.get("QAAGENT_MODEL", "qwen2.5:7b")
-    temperature: float = float(os.environ.get("QAAGENT_TEMP", 0.2))
+class ChatResponse(BaseModel):
+    """Response from an LLM chat completion."""
+    content: str
+    model: str = ""
+    usage: Optional[Dict[str, Any]] = None
+
+
+class QAAgentLLMError(Exception):
+    """Raised when the LLM client encounters an error."""
+    pass
+
+
+class LLMClient:
+    """Thin wrapper around litellm with qaagent defaults.
+
+    Provider selection uses litellm model string format:
+    - "ollama/qwen2.5:7b" for local Ollama
+    - "anthropic/claude-sonnet-4-5-20250929" for Anthropic
+    - "gpt-4o" for OpenAI
+    """
+
+    def __init__(
+        self,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+    ):
+        self.provider = provider or os.environ.get("QAAGENT_LLM", "ollama")
+        self.model = model or os.environ.get("QAAGENT_MODEL", "qwen2.5:7b")
+        self.temperature = temperature or float(os.environ.get("QAAGENT_TEMP", "0.2"))
+
+    def _litellm_model(self) -> str:
+        """Build the litellm model string from provider + model."""
+        if self.provider == "ollama":
+            return f"ollama/{self.model}"
+        if self.provider == "anthropic":
+            return f"anthropic/{self.model}"
+        if self.provider in ("openai", "gpt"):
+            return self.model  # OpenAI models don't need prefix
+        # Default: pass through as-is (litellm can figure it out)
+        return f"{self.provider}/{self.model}" if "/" not in self.model else self.model
+
+    def chat(self, messages: list[ChatMessage]) -> ChatResponse:
+        """Send messages to configured LLM provider via litellm."""
+        try:
+            import litellm
+        except ImportError as exc:
+            raise QAAgentLLMError(
+                "litellm is not installed. Install LLM extras: pip install -e .[llm]"
+            ) from exc
+
+        litellm_messages = [{"role": m.role, "content": m.content} for m in messages]
+
+        try:
+            response = litellm.completion(
+                model=self._litellm_model(),
+                messages=litellm_messages,
+                temperature=self.temperature,
+            )
+        except Exception as exc:
+            raise QAAgentLLMError(f"LLM request failed: {exc}") from exc
+
+        content = response.choices[0].message.content or ""
+        usage_data = None
+        if hasattr(response, "usage") and response.usage:
+            usage_data = {
+                "prompt_tokens": getattr(response.usage, "prompt_tokens", None),
+                "completion_tokens": getattr(response.usage, "completion_tokens", None),
+                "total_tokens": getattr(response.usage, "total_tokens", None),
+            }
+
+        return ChatResponse(
+            content=content,
+            model=getattr(response, "model", self._litellm_model()),
+            usage=usage_data,
+        )
+
+    def available(self) -> bool:
+        """Check if the configured provider is reachable."""
+        try:
+            import litellm  # noqa: F401
+        except ImportError:
+            return False
+
+        if self.provider == "ollama":
+            try:
+                import ollama  # type: ignore
+                ollama.list()
+                return True
+            except Exception:
+                return False
+
+        # For cloud providers, just check that the SDK is importable
+        if self.provider == "anthropic":
+            try:
+                import anthropic  # type: ignore  # noqa: F401
+                return bool(os.environ.get("ANTHROPIC_API_KEY"))
+            except ImportError:
+                return False
+
+        if self.provider in ("openai", "gpt"):
+            try:
+                import openai  # type: ignore  # noqa: F401
+                return bool(os.environ.get("OPENAI_API_KEY"))
+            except ImportError:
+                return False
+
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton and convenience functions (backward compat)
+# ---------------------------------------------------------------------------
+
+_default_client: Optional[LLMClient] = None
+
+
+def _get_client() -> LLMClient:
+    global _default_client
+    if _default_client is None:
+        _default_client = LLMClient()
+    return _default_client
 
 
 def llm_available() -> bool:
-    cfg = LLMConfig()
-    if cfg.provider == "ollama":
-        return _import_ollama() is not None
-    # Other providers could be added later
-    return False
+    """Check if an LLM provider is available."""
+    return _get_client().available()
 
 
-def chat(messages: List[Dict[str, str]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
-    cfg = LLMConfig()
-    if cfg.provider == "ollama":
-        ollama = _import_ollama()
-        if not ollama:
-            raise RuntimeError("Ollama is not installed. Install extras: pip install -e .[llm]")
-        # Use the simple chat API
-        return ollama.chat(
-            model=cfg.model,
-            messages=messages,
-            options={"temperature": cfg.temperature},
-            tools=tools or None,
-        )
-    raise RuntimeError(f"Unsupported LLM provider: {cfg.provider}")
+def chat(
+    messages: List[Dict[str, str]],
+    tools: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Backward-compat chat function. Returns a dict like the old Ollama API."""
+    client = _get_client()
+    typed_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
+    response = client.chat(typed_messages)
+    # Return in the old Ollama response format for backward compat
+    return {
+        "message": {"role": "assistant", "content": response.content},
+        "model": response.model,
+    }
 
 
 def generate_api_tests_from_spec(
@@ -159,4 +275,3 @@ def _templated_summary(summary: Dict[str, Any]) -> str:
         "- Next steps: increase API coverage; add regression suite; integrate CI gating",
     ]
     return "\n".join(parts) + "\n"
-

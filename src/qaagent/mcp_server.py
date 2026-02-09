@@ -16,7 +16,7 @@ except Exception as e:  # noqa: BLE001
 
 from .tools import ensure_dir, run_command
 from .report import generate_report
-from .config import load_config
+from .config import load_config_compat
 from .openapi_utils import find_openapi_candidates, load_openapi, enumerate_operations
 from .a11y import run_axe
 from .llm import llm_available, generate_api_tests_from_spec, summarize_findings_text
@@ -134,7 +134,7 @@ def schemathesis_run(args: SchemathesisArgs):
     out = Path(args.outdir)
     ensure_dir(out)
     # Load config defaults if missing
-    cfg = load_config()
+    cfg = load_config_compat()
     openapi = args.openapi or (cfg.api.openapi if cfg and cfg.api.openapi else None)
     base_url = args.base_url or (cfg.api.base_url if cfg and cfg.api.base_url else None)
 

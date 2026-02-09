@@ -1,0 +1,21 @@
+import { test as setup, expect } from '@playwright/test';
+import { config } from '../src/config';
+
+setup('authenticate', async ({ page }) => {
+  // Navigate to login page
+  await page.goto(config.loginUrl || '/login');
+
+  // Fill in credentials from environment
+  const username = process.env.TEST_USERNAME || '{{ default_username }}';
+  const password = process.env.TEST_PASSWORD || '{{ default_password }}';
+
+  await page.getByLabel(/username|email/i).fill(username);
+  await page.getByLabel(/password/i).fill(password);
+  await page.getByRole('button', { name: /sign in|log in|login/i }).click();
+
+  // Wait for navigation to confirm login
+  await page.waitForURL('**/dashboard**');
+
+  // Save auth state
+  await page.context().storageState({ path: '.auth/state.json' });
+});

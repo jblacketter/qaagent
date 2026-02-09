@@ -1,0 +1,32 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('{{ cuj.name }}', () => {
+{% if llm_steps %}
+{% for step in llm_steps %}
+  {{ step }}
+
+{% endfor %}
+{% else %}
+  // CUJ: {{ cuj.name }} ({{ cuj.id }})
+  // Components: {{ cuj.components | join(', ') }}
+{% for criterion in cuj.acceptance %}
+  // TODO: {{ criterion }}
+{% endfor %}
+
+{% for api in cuj.apis %}
+  test('{{ api.get("method", "GET") }} {{ api.get("path", "/") }}', async ({ request }) => {
+    // TODO: Implement test for {{ api.get("method", "GET") }} {{ api.get("path", "/") }}
+    const response = await request.{{ api.get("method", "GET") | lower }}('{{ api.get("path", "/") }}');
+    expect(response.status()).toBeLessThan(500);
+  });
+
+{% endfor %}
+{% if not cuj.apis %}
+  test('{{ cuj.name }} - placeholder', async ({ page }) => {
+    // TODO: Implement user journey test
+    await page.goto('/');
+    await expect(page).not.toHaveTitle(/error/i);
+  });
+{% endif %}
+{% endif %}
+});

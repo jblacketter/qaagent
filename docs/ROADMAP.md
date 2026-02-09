@@ -1,196 +1,77 @@
-# QA Agent - Feature Roadmap
+# QA Agent - Project Roadmap (v2)
 
-## ✅ Completed (Sprint 3)
+**Last Updated:** 2026-02-08
+**Lead:** claude
+**Reviewer:** codex
+**Arbiter:** Human
 
-### Sprint 1-2: Foundation
-- [x] Evidence collection pipeline (collectors, analyzers, risk aggregation)
-- [x] FastAPI-based REST API (repository and run management)
-- [x] React dashboard (repository-centric workflow, dark mode)
-- [x] Risk prioritization with severity grouping
-- [x] Comprehensive test coverage
+## Overview
 
-### Sprint 3: Auto-Fix & Enhanced Scanning
-- [x] Fixed Bandit timeout issue (increased to 10min, smart filtering)
-- [x] `qaagent fix` command (autopep8, black, isort integration)
-- [x] Enhanced recommendations with actionable commands
-- [x] Auto-fix for formatting and import issues
-- [x] Documentation: AUTO_FIX_GUIDE.md
+qaagent is a Python QA automation framework that discovers routes, assesses risks, generates test strategies, and produces reports. This roadmap replaces the original (Oct 2025) and reflects the project's evolution and new priorities.
 
-## 📋 Planned Features
+## Completed Work (Sprints 1-3, Oct 2025)
 
-### Next Sprint: LLM-Powered Fixes
-**Priority:** High
-**Estimated Time:** 3.5 hours
-**Prerequisites:** Ollama on Windows GPU machine
+- Evidence collection pipeline (flake8, pylint, bandit, pip-audit, git-churn, coverage)
+- CLI (Typer) with 30+ commands across subgroups
+- MCP server with 12+ tools
+- Route discovery (OpenAPI specs, Next.js App Router)
+- Risk assessment engine with CUJ integration
+- Strategy generation
+- Test generation: Behave BDD features, pytest unit stubs, test data via Faker
+- Reporting: Markdown, HTML dashboard
+- Web UI (`qaagent web-ui`) with WebSocket updates
+- Target/workspace management system
+- LLM module (Ollama-only, basic chat + summarize)
+- Configuration system (YAML profiles, target registry)
+- FastAPI REST API for evidence/runs
 
-**Features:**
-- [ ] LLM client module (Ollama integration)
-- [ ] AI-powered fix generator
-- [ ] `qaagent fix-llm` CLI command
-- [ ] Context-aware security fixes
-- [ ] Fix explanations (what changed and why)
-- [ ] Confidence scoring
+## Current State Assessment (Feb 2026)
 
-**Documentation:** LLM_POWERED_FIXES.md (created)
+### Strengths
+- Solid modular architecture: analyzers, collectors, generators, evidence
+- Good test coverage (~50 test files)
+- Well-designed evidence pipeline with manifest tracking
+- Config system with profile templates per framework
 
-**Setup Required:**
-- Configure Ollama on Windows for network access
-- Pull DeepSeek Coder or CodeLlama model
-- Test Mac → Windows connectivity
-
-### Future: Enhanced Security Scanning
-**Priority:** Medium-High
-**Estimated Time:** 1-2 hours
-
-**Features:**
-1. **Secrets Detection** (30 min)
-   - Find hardcoded API keys, passwords, tokens
-   - Integration with `detect-secrets` or `trufflehog`
-   - Auto-detect common patterns (AWS keys, GitHub tokens, etc.)
-
-2. **JavaScript/Node.js Security** (30 min)
-   - `npm audit` integration
-   - `yarn audit` integration
-   - Detect vulnerable dependencies in package.json
-
-**Benefits:**
-- Find security issues earlier
-- Reduce false positives (bandit-only misses JS vulnerabilities)
-- Better coverage for Next.js projects like SonicGrid
-
-### Future: Dashboard Enhancements
-**Priority:** Medium
-**Estimated Time:** 2-3 hours
-
-**Features:**
-- [ ] Fix tracking between scans (show what was fixed)
-- [ ] Improvement score over time
-- [ ] "What changed" reports (before/after comparison)
-- [ ] Export reports to PDF/Markdown
-- [ ] Share reports via URL
-
-### Future: Test Generation
-**Priority:** Low-Medium
-**Estimated Time:** 3-4 hours
-
-**Features:**
-- [ ] LLM-generated test cases for untested code
-- [ ] Property-based tests for critical functions
-- [ ] Integration test templates
-- [ ] Test coverage goals
-
-### Future: CI/CD Integration
-**Priority:** Low
-**Estimated Time:** 2 hours
-
-**Features:**
-- [ ] GitHub Actions workflow template
-- [ ] GitLab CI template
-- [ ] Pre-commit hooks for auto-fix
-- [ ] PR commenting with fix suggestions
-
-## 🚫 Deferred Features
-
-### Auto-create PRs (Removed from roadmap)
-**Reason:** Too complex for current needs
-**Alternative:** Focus on generating fixes that developers can review and apply manually
-
-## Implementation Priority
-
-### Immediate (This Sprint)
-1. None - Sprint 3 completed!
-
-### Next Sprint (When on Windows)
-1. **LLM-Powered Fixes** - High value, enables AI-assisted fixing
-
-### After LLM Integration
-1. **Secrets Detection** - Quick win, high security value
-2. **npm/yarn Audit** - Completes JS security coverage
-
-### Future Sprints
-1. Dashboard enhancements (tracking, comparisons)
-2. Test generation with LLM
-3. CI/CD integration templates
-
-## Success Metrics
-
-### Sprint 3 (Completed)
-- ✅ Bandit completes on large projects (no timeout)
-- ✅ Users can auto-fix formatting in one command
-- ✅ Recommendations include actionable commands
-- ✅ Documentation covers all new features
-
-### Next Sprint (LLM Fixes)
-- LLM generates fixes with >70% confidence
-- Fixes are accurate and applicable
-- Response time <30 seconds per fix
-- Windows ↔ Mac communication is stable
-
-### Future Sprints
-- Reduce false positives by 50%
-- Increase code coverage detection
-- Faster scan times (<5 min for large projects)
-
-## Technical Debt
-
-### Current
-- Bundle size optimization for React dashboard (197 KB gzipped)
-  - Use code splitting (lazy loading routes)
-  - Split vendor chunks
-
-### Future
-- Add unit tests for auto-fix module
-- Add integration tests for LLM client
-- Improve error handling in collectors
-
-## Dependencies
-
-### Installed
-- flake8, pylint, bandit, pip-audit (Python quality/security)
-- isort (import sorting)
-- FastAPI, uvicorn (API server)
-- React, TypeScript (dashboard)
-
-### Need to Install
-- **For LLM Fixes:**
-  - None (uses remote Ollama server)
-
-- **For Secrets Detection:**
-  - `detect-secrets` or `trufflehog`
-
-- **For JS Scanning:**
-  - None (uses existing npm/yarn)
-
-- **For Auto-fix:**
-  - `autopep8` (recommended for users)
-  - `black` (optional alternative)
-
-## Notes
-
-- All features should include documentation
-- Breaking changes require migration guide
-- Security features take priority over convenience
-- Performance: scan time should stay <10 min for 100k LOC projects
-
-## Questions / Decisions Needed
-
-1. **LLM Model Choice:** DeepSeek Coder 6.7B vs CodeLlama 13B?
-   - Recommend: DeepSeek Coder (better for Python/JS)
-
-2. **Secrets Detection Tool:** detect-secrets vs trufflehog?
-   - TBD when implementing
-
-3. **Auto-apply LLM Fixes:** Allow with flag or always manual review?
-   - Decision: Always manual review for safety
-
-## Resources
-
-- **Documentation:** `docs/`
-- **Examples:** `examples/`
-- **Tests:** `tests/`
-- **Discussions:** GitHub Issues
+### Technical Debt (addressed in Phase 1)
+1. ~~**cli.py is 2048 lines**~~ — Split into 9 command modules (Phase 1)
+2. ~~**Dual config system**~~ — Compatibility bridge + migration utility (Phase 1)
+3. ~~**LLM module is Ollama-only**~~ — Multi-provider via litellm (Phase 1)
+4. ~~**Test generators produce stubs**~~ — LLM-enhanced generation (Phase 2)
+5. ~~**Dataclass/Pydantic inconsistency**~~ — Standardized to Pydantic (Phase 1)
+6. ~~**No E2E test framework generation**~~ — PlaywrightGenerator (Phase 2)
+7. **Route discovery limited** - no FastAPI/Flask/Django source parsing (Phase 4)
+8. ~~**No actual test runner orchestration**~~ — RunOrchestrator + diagnostics (Phase 3)
 
 ---
 
-**Last Updated:** 2025-10-27
-**Next Review:** After LLM integration sprint
+## Phase Plan
+
+### Phase 1: Codebase Modernization
+- Status: **Complete** (approved by codex, 4-round review cycle)
+- Priority: High
+- Description: Split CLI into command modules, legacy config migration, multi-provider LLM via litellm, Pydantic standardization
+- Details: `docs/phases/modernization.md`
+
+### Phase 2: Test Framework Generation Engine
+- Status: **Complete** (approved by codex, 2-round review cycle)
+- Priority: Critical (key differentiator)
+- Description: BaseGenerator ABC, LLMTestEnhancer, PlaywrightGenerator, TestValidator, `generate all`/`e2e` commands, `plan-run --generate`
+- Details: `docs/phases/test-framework-gen.md`
+
+### Phase 3: Intelligent Test Orchestration
+- Status: **Complete** (approved by codex, 3-round review cycle)
+- Priority: High
+- Description: Unified test runners, orchestration engine, LLM-powered failure diagnostics, enhanced `plan-run` pipeline
+- Details: `docs/phases/test-orchestration.md`
+
+### Phase 4: Enhanced Analysis
+- Status: **Plan Approved** (approved by codex, 3-round review cycle) — Implementation in progress
+- Priority: Medium
+- Description: FastAPI/Flask/Django route discovery, pluggable risk rule engine, CI/CD templates
+- Details: `docs/phases/enhanced-analysis.md`
+
+---
+
+## Decision Log
+See `docs/decision_log.md`

@@ -3,79 +3,27 @@ from __future__ import annotations
 import textwrap
 from collections import defaultdict
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Optional, Sequence, Set
 
 from .models import Risk, RiskCategory, RiskSeverity, Route, SEVERITY_SCORES
+from .rules import default_registry
 
 
-def _missing_authentication(route: Route) -> Risk | None:
-    if route.method in {"POST", "PUT", "PATCH", "DELETE"} and not route.auth_required:
-        return Risk(
-            category=RiskCategory.SECURITY,
-            severity=RiskSeverity.CRITICAL if "admin" in route.path else RiskSeverity.HIGH,
-            route=f"{route.method} {route.path}",
-            title="Mutation endpoint without authentication",
-            description="Sensitive mutation endpoints should require authentication.",
-            recommendation="Require authentication and authorization checks for mutation endpoints.",
-            cwe_id="CWE-306",
-            owasp_top_10="A07:2021",
-            references=[
-                "https://cwe.mitre.org/data/definitions/306.html",
-                "https://owasp.org/Top10/A07_Identification_and_Authentication_Failures/",
-            ],
-        )
-    return None
+def assess_risks(
+    routes: Sequence[Route],
+    disabled_rules: Optional[Set[str]] = None,
+) -> List[Risk]:
+    """Assess risks using the pluggable rule registry.
 
+    Args:
+        routes: Routes to evaluate.
+        disabled_rules: Set of rule IDs to skip.
 
-def _missing_pagination(route: Route) -> Risk | None:
-    if route.method != "GET":
-        return None
-    params = route.params.get("query", [])
-    names = {param.get("name", "").lower() for param in params}
-    if any(name in names for name in {"limit", "page", "per_page", "cursor"}):
-        return None
-    if any(keyword in route.path for keyword in ("/search", "/list", "/all")):
-        severity = RiskSeverity.HIGH
-    else:
-        severity = RiskSeverity.MEDIUM
-    return Risk(
-        category=RiskCategory.PERFORMANCE,
-        severity=severity,
-        route=f"{route.method} {route.path}",
-        title="Potential missing pagination",
-        description="Large collection endpoints without pagination can exhaust resources.",
-        recommendation="Introduce limit/offset or cursor-based pagination for collection endpoints.",
-        references=["https://restfulapi.net/pagination/"],
-    )
-
-
-def _deprecated_operation(route: Route) -> Risk | None:
-    if route.metadata.get("deprecated"):
-        return Risk(
-            category=RiskCategory.RELIABILITY,
-            severity=RiskSeverity.LOW,
-            route=f"{route.method} {route.path}",
-            title="Deprecated route",
-            description="Deprecated endpoints should be removed or replaced to avoid drift.",
-            recommendation="Plan to remove or replace deprecated endpoints and update clients.",
-        )
-    return None
-
-
-RULES = [
-    _missing_authentication,
-    _missing_pagination,
-    _deprecated_operation,
-]
-
-
-def assess_risks(routes: Sequence[Route]) -> List[Risk]:
-    risks: List[Risk] = []
-    for route in routes:
-        for rule in RULES:
-            risk = rule(route)
-            if risk:
-                risks.append(risk)
+    Returns:
+        Risks sorted by severity (highest first).
+    """
+    registry = default_registry()
+    risks = registry.run_all(list(routes), disabled=disabled_rules)
 
     # Prioritise by severity, then by heuristics (admin routes higher priority)
     prioritized = sorted(

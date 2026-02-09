@@ -13,11 +13,19 @@ class ProjectSettings(BaseModel):
     description: Optional[str] = None
 
 
+class AuthSettings(BaseModel):
+    header_name: str = "Authorization"
+    token_env: str = "API_TOKEN"
+    prefix: str = "Bearer "
+
+
 class EnvironmentSettings(BaseModel):
     base_url: Optional[str] = None
     start_command: Optional[str] = None
     health_endpoint: Optional[str] = None
     headers: Dict[str, str] = Field(default_factory=dict)
+    auth: Optional[AuthSettings] = None
+    timeout: Optional[float] = None
     notes: Optional[str] = None
 
 
@@ -26,6 +34,9 @@ class OpenAPISettings(BaseModel):
     auto_generate: bool = False
     source_dir: Optional[str] = None
     generator: Optional[str] = None  # e.g. "nextjs", "fastapi"
+    tags: List[str] = Field(default_factory=list)
+    operations: List[str] = Field(default_factory=list)
+    endpoint_pattern: Optional[str] = None
 
 
 class SuiteSettings(BaseModel):
@@ -44,11 +55,17 @@ class DataSuiteSettings(SuiteSettings):
     count: int = 10
 
 
+class PlaywrightSuiteSettings(SuiteSettings):
+    browsers: List[str] = Field(default_factory=lambda: ["chromium"])
+    auth_setup: bool = False
+    cuj_path: Optional[str] = None
+
+
 class TestsSettings(BaseModel):
     output_dir: str = "tests/qaagent"
     behave: Optional[SuiteSettings] = SuiteSettings(enabled=True, output_dir="tests/qaagent/behave", framework="behave")
     unit: Optional[SuiteSettings] = SuiteSettings(enabled=True, output_dir="tests/qaagent/unit", framework="pytest")
-    e2e: Optional[SuiteSettings] = SuiteSettings(enabled=False, output_dir="tests/qaagent/e2e", framework="playwright")
+    e2e: Optional[PlaywrightSuiteSettings] = PlaywrightSuiteSettings(enabled=False, output_dir="tests/qaagent/e2e", framework="playwright")
     data: Optional[DataSuiteSettings] = DataSuiteSettings(enabled=True, output_dir="tests/qaagent/fixtures")
 
 
@@ -69,6 +86,16 @@ class LLMSettings(BaseModel):
     fallback_to_templates: bool = True
 
 
+class RunSettings(BaseModel):
+    """Settings for test orchestration and execution."""
+    retry_count: int = Field(default=0, description="Max retries for failed tests")
+    timeout: int = Field(default=300, description="Per-suite timeout in seconds")
+    suite_order: List[str] = Field(
+        default_factory=lambda: ["unit", "behave", "e2e"],
+        description="Order in which test suites are executed",
+    )
+
+
 class QAAgentProfile(BaseModel):
     project: ProjectSettings
     app: Dict[str, EnvironmentSettings] = Field(default_factory=dict)
@@ -77,6 +104,7 @@ class QAAgentProfile(BaseModel):
     exclude: ExcludeSettings = Field(default_factory=ExcludeSettings)
     risk_assessment: RiskAssessmentSettings = Field(default_factory=RiskAssessmentSettings)
     llm: Optional[LLMSettings] = None
+    run: RunSettings = Field(default_factory=RunSettings)
 
     def resolve_spec_path(self, project_root: Path) -> Optional[Path]:
         if not self.openapi.spec_path:

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="pytest" tests="5" errors="0" failures="1" skipped="1" time="1.234">
+  <testcase classname="test_pets_api.TestPetsAPI" name="test_get_pets_success" time="0.100" />
+  <testcase classname="test_pets_api.TestPetsAPI" name="test_post_pets_success" time="0.200" />
+  <testcase classname="test_pets_api.TestPetsAPI" name="test_get_pets_pet_id_success" time="0.150" />
+  <testcase classname="test_pets_api.TestPetsAPI" name="test_delete_pets_pet_id_error" time="0.300">
+    <failure message="assert 500 == 204">AssertionError: assert 500 == 204
+  +  where 500 = response.status_code</failure>
+  </testcase>
+  <testcase classname="test_pets_api.TestPetsAPI" name="test_patch_pets_skipped" time="0.000">
+    <skipped message="not implemented yet" />
+  </testcase>
+</testsuite>

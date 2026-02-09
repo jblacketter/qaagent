@@ -6,6 +6,7 @@ Generates pytest test classes with:
 - Invalid input tests
 - Edge case tests (parametrized)
 - Mock-based unit tests
+- LLM-enhanced assertions and edge cases (when enabled)
 """
 
 from __future__ import annotations
@@ -16,17 +17,43 @@ from typing import Any, Dict, List, Optional
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from qaagent.analyzers.models import Route
+from qaagent.analyzers.models import Risk, Route
+from qaagent.config.models import LLMSettings
+from qaagent.generators.base import BaseGenerator, GenerationResult, validate_python_syntax
 from qaagent.generators.data_generator import DataGenerator
+from qaagent.generators.validator import TestValidator
 
 
-class UnitTestGenerator:
+class UnitTestGenerator(BaseGenerator):
     """Generates pytest unit tests from discovered routes."""
 
-    def __init__(self, routes: List[Route], base_url: str = "http://localhost:8000"):
-        self.routes = routes
-        self.base_url = base_url
+    def __init__(
+        self,
+        routes: List[Route],
+        base_url: str = "http://localhost:8000",
+        risks: Optional[List[Risk]] = None,
+        output_dir: Optional[Path] = None,
+        project_name: str = "Application",
+        llm_settings: Optional[LLMSettings] = None,
+    ):
+        super().__init__(
+            routes=routes,
+            risks=risks,
+            output_dir=output_dir,
+            base_url=base_url,
+            project_name=project_name,
+            llm_settings=llm_settings,
+        )
         self._setup_jinja()
+        self._enhancer = None
+        self._validator = TestValidator()
+
+    def _get_enhancer(self):
+        """Lazy-init LLM enhancer."""
+        if self._enhancer is None and self.llm_enabled:
+            from qaagent.generators.llm_enhancer import LLMTestEnhancer
+            self._enhancer = LLMTestEnhancer(self.llm_settings)
+        return self._enhancer
 
     def _setup_jinja(self) -> None:
         """Initialize Jinja2 environment."""
@@ -37,39 +64,48 @@ class UnitTestGenerator:
             lstrip_blocks=True,
         )
 
-    def generate(self, output_dir: Path) -> Dict[str, Path]:
+    def generate(self, output_dir: Optional[Path] = None, **kwargs) -> GenerationResult:
         """
         Generate pytest unit tests.
 
         Args:
-            output_dir: Directory to write test files
+            output_dir: Directory to write test files (overrides constructor value)
 
         Returns:
-            Dictionary mapping test file types to paths
+            GenerationResult with files, stats, and warnings
         """
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = Path(output_dir) if output_dir else self.output_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-        generated = {}
+        result = GenerationResult()
+        test_count = 0
 
         # Group routes by resource
         resources = self._group_routes_by_resource()
 
         # Generate test file for each resource
         for resource_name, resource_routes in resources.items():
-            test_file = self._generate_test_file(resource_name, resource_routes, output_dir)
-            generated[f"test_{resource_name}"] = test_file
+            test_file, count = self._generate_test_file(resource_name, resource_routes, target_dir, result)
+            result.files[f"test_{resource_name}"] = test_file
+            test_count += count
 
         # Generate conftest.py with fixtures
-        conftest_file = self._generate_conftest(output_dir, resources)
-        generated["conftest"] = conftest_file
+        conftest_file = self._generate_conftest(target_dir, resources)
+        result.files["conftest"] = conftest_file
 
         # Generate __init__.py
-        init_file = output_dir / "__init__.py"
+        init_file = target_dir / "__init__.py"
         init_file.write_text("# Generated unit tests\n")
-        generated["init"] = init_file
+        result.files["init"] = init_file
 
-        return generated
+        result.stats = {
+            "tests": test_count,
+            "files": len(result.files),
+            "resources": len(resources),
+        }
+        result.llm_used = self.llm_enabled and self._enhancer is not None
+
+        return result
 
     def _group_routes_by_resource(self) -> Dict[str, List[Route]]:
         """Group routes by resource name (first path segment)."""
@@ -87,9 +123,9 @@ class UnitTestGenerator:
         return resources
 
     def _generate_test_file(
-        self, resource_name: str, routes: List[Route], output_dir: Path
-    ) -> Path:
-        """Generate a test file for a resource."""
+        self, resource_name: str, routes: List[Route], output_dir: Path, result: GenerationResult
+    ) -> tuple[Path, int]:
+        """Generate a test file for a resource. Returns (path, test_count)."""
         template = self.jinja_env.get_template("test_class_enhanced.py.j2")
 
         # Prepare test cases for each route
@@ -104,22 +140,41 @@ class UnitTestGenerator:
             test_cases=test_cases,
         )
 
+        # Validate syntax and attempt LLM fix
+        content, was_fixed = self._validator.validate_and_fix(
+            content, "python", enhancer=self._get_enhancer(), max_retries=2,
+        )
+        vr = self._validator.validate_python(content)
+        if not vr.valid:
+            result.warnings.append(f"test_{resource_name}_api.py has syntax error: {'; '.join(vr.errors)}")
+
         test_file = output_dir / f"test_{resource_name}_api.py"
         test_file.write_text(content)
-        return test_file
+        return test_file, len(test_cases)
 
     def _create_test_cases(self, route: Route) -> List[Dict[str, Any]]:
         """Create test cases for a route."""
         cases = []
 
-        # Happy path test
+        # LLM-enhanced assertions
+        extra_assertions = []
+        enhancer = self._get_enhancer()
+        if enhancer:
+            schema = self._extract_response_schema(route)
+            extra_assertions = enhancer.enhance_assertions(route, schema)
+
+        # Happy path test — use concrete sample path for parameterized routes
+        sample_path = self._resolve_sample_path(route.path)
+
         cases.append({
             "type": "happy_path",
             "name": f"test_{route.method.lower()}_{self._sanitize_path(route.path)}_success",
             "route": route,
+            "sample_path": sample_path,
             "description": f"Test {route.method} {route.path} succeeds with valid data",
             "expected_status": self._get_expected_status(route.method),
             "test_data": self._generate_test_data(route),
+            "extra_assertions": extra_assertions,
         })
 
         # Invalid data tests for POST/PUT/PATCH
@@ -135,15 +190,25 @@ class UnitTestGenerator:
 
         # Parametrized edge cases for path parameters
         if "{" in route.path:
+            edge_params = self._generate_invalid_params(route)
             cases.append({
                 "type": "parametrized",
                 "name": f"test_{route.method.lower()}_{self._sanitize_path(route.path)}_invalid_params",
                 "route": route,
                 "description": f"Test {route.method} {route.path} with invalid path parameters",
-                "parameters": self._generate_invalid_params(route),
+                "parameters": edge_params,
             })
 
         return cases
+
+    @staticmethod
+    def _resolve_sample_path(path: str) -> str:
+        """Replace path parameters with concrete sample values for happy-path tests.
+
+        E.g. /pets/{pet_id} -> /pets/1, /users/{user_id}/posts/{post_id} -> /users/1/posts/1
+        """
+        import re
+        return re.sub(r"\{[^}]+\}", "1", path)
 
     def _sanitize_path(self, path: str) -> str:
         """Convert path to valid Python identifier."""
@@ -172,9 +237,48 @@ class UnitTestGenerator:
         return {}
 
     def _generate_invalid_params(self, route: Route) -> List[Any]:
-        """Generate invalid parameter values for parametrized tests."""
-        # Common invalid values for IDs
+        """Generate invalid parameter values for parametrized tests.
+
+        LLM returns list[dict] with {name, params, expected_status, description}.
+        Template needs scalar values for path interpolation, so we extract the
+        first value from each case's params dict.
+        """
+        enhancer = self._get_enhancer()
+        if enhancer:
+            cases = enhancer.generate_edge_cases(route, self.risks)
+            if cases:
+                return self._normalize_edge_cases(cases)
+
+        # Template fallback: common invalid values for IDs
         return [-1, 0, "invalid", None, ""]
+
+    @staticmethod
+    def _normalize_edge_cases(cases: List[Any]) -> List[Any]:
+        """Extract scalar param values from LLM-returned edge case dicts."""
+        scalars = []
+        for case in cases:
+            if isinstance(case, dict) and "params" in case:
+                params = case["params"]
+                if isinstance(params, dict) and params:
+                    # Take the first param value
+                    scalars.append(next(iter(params.values())))
+                else:
+                    scalars.append(params)
+            else:
+                # Already a scalar (from fallback)
+                scalars.append(case)
+        return scalars if scalars else [-1, 0, "invalid", None, ""]
+
+    def _extract_response_schema(self, route: Route) -> Optional[Dict[str, Any]]:
+        """Extract response schema from route responses."""
+        for status_code, response_data in route.responses.items():
+            if isinstance(response_data, dict):
+                content = response_data.get("content", {})
+                json_content = content.get("application/json", {})
+                schema = json_content.get("schema")
+                if schema:
+                    return schema
+        return None
 
     def _generate_conftest(self, output_dir: Path, resources: Dict[str, List[Route]]) -> Path:
         """Generate conftest.py with pytest fixtures."""

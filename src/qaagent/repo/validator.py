@@ -224,6 +224,15 @@ class RepoValidator:
 
         return False
 
+    def get_framework_parser(self):
+        """Return a FrameworkParser instance for the detected project type, or None."""
+        from qaagent.discovery import get_framework_parser
+
+        project_type = self.detect_project_type()
+        if project_type:
+            return get_framework_parser(project_type)
+        return None
+
     def get_api_directory(self) -> Optional[Path]:
         """
         Get the main API directory for the detected project type.
