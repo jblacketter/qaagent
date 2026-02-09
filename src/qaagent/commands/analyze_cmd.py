@@ -246,26 +246,30 @@ def analyze_strategy(
     markdown: Optional[str] = typer.Option("strategy.md", help="Optional Markdown export"),
 ):
     """Generate testing strategy recommendations based on discovered routes and risks."""
+    # Load active profile up front (best-effort) so disabled_rules is
+    # available regardless of how routes are sourced.
     active_entry = None
     active_profile = None
+    try:
+        active_entry, active_profile = load_active_profile()
+    except Exception:
+        pass
+
     if routes_file:
         routes = load_routes_from_file(Path(routes_file))
     elif openapi:
         routes = discover_routes(openapi_path=openapi)
-    else:
-        try:
-            active_entry, active_profile = load_active_profile()
-        except Exception:
-            typer.echo("Provide --routes FILE or --openapi SPEC to generate strategy or set an active target.")
-            raise typer.Exit(code=2)
+    elif active_entry and active_profile:
+        project_root = active_entry.resolved_path()
+        spec_path = active_profile.resolve_spec_path(project_root)
+        if spec_path and spec_path.exists():
+            routes = discover_routes(openapi_path=str(spec_path))
         else:
-            project_root = active_entry.resolved_path()
-            spec_path = active_profile.resolve_spec_path(project_root)
-            if spec_path and spec_path.exists():
-                routes = discover_routes(openapi_path=str(spec_path))
-            else:
-                typer.echo("Active target does not define an OpenAPI spec path.")
-                raise typer.Exit(code=2)
+            typer.echo("Active target does not define an OpenAPI spec path.")
+            raise typer.Exit(code=2)
+    else:
+        typer.echo("Provide --routes-file FILE or --openapi SPEC to generate strategy or set an active target.")
+        raise typer.Exit(code=2)
 
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))

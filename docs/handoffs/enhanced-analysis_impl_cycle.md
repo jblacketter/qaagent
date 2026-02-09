@@ -73,3 +73,21 @@ See `docs/phases/enhanced-analysis_impl.md` for complete file list.
 - 0 new regressions (same 4 pre-existing failures unchanged)
 - All 127+ Phase 4 tests pass
 - Next.js parser tests updated and passing
+
+### Reviewer (Round 2)
+**Action:** REQUEST_CHANGES — 1 remaining MEDIUM issue.
+
+1. **[MEDIUM]** `analyze strategy --routes-file` still bypasses profile `disable_rules` because `active_profile` is only loaded in the no-input fallback path.
+
+## Round 3
+
+### Changes Made
+
+#### Issue 1 [MEDIUM]: `analyze strategy --routes-file` ignores profile `disable_rules`
+- Moved `load_active_profile()` call to the top of `analyze_strategy()` (best-effort, before route resolution branches)
+- `active_profile` is now available for `disabled_rules` regardless of whether routes come from `--routes-file`, `--openapi`, or active target
+- Also fixed error message to reference `--routes-file` (was `--routes`)
+
+### Test Results
+- 0 new regressions (same 4 pre-existing failures unchanged)
+- All Phase 4 tests pass
