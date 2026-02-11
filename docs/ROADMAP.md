@@ -1,57 +1,82 @@
-# QA Agent - Roadmap
-
-**Last Updated:** 2026-02-09
+# Project Roadmap
 
 ## Overview
 
-qaagent is a Python QA automation framework that discovers routes, assesses risks, generates test strategies, orchestrates test execution, and produces reports.
+**qaagent** is a Python QA automation framework that discovers routes, assesses risks, generates tests, orchestrates execution, and produces reports. Phases 1-4 (Modernization, Test Generation, Orchestration, Enhanced Analysis) are complete. This roadmap covers the next wave of development.
+
+**Tech Stack:** Python 3.11+, Typer, Pydantic v2, Jinja2, litellm, FastAPI, Playwright, pytest, Behave
+
+**Workflow:** Lead (claude) / Reviewer (codex) with Human Arbiter (see `ai-handoff.yaml`)
 
 ## Completed Work
 
-### Phase 1: Codebase Modernization
-- Split monolithic CLI (2000+ lines) into 9 command modules
-- Legacy config migration with compatibility bridge
-- Multi-provider LLM client via litellm (Ollama, Claude, GPT)
-- Standardized all models to Pydantic v2
+- **Phase 1: Codebase Modernization** — CLI split, legacy migration, LLM client, Pydantic v2
+- **Phase 2: Test Framework Generation** — BaseGenerator ABC, LLM enhancer, Playwright/Behave/pytest generators, validator
+- **Phase 3: Intelligent Test Orchestration** — Unified runners, RunOrchestrator, FailureDiagnostics, `run-all`
+- **Phase 4: Enhanced Analysis** — AST-based parsers (FastAPI/Flask/Django/Next.js), 16 risk rules, CI/CD templates
 
-### Phase 2: Test Framework Generation Engine
-- `BaseGenerator` ABC with `GenerationResult` for uniform output
-- `LLMTestEnhancer` for schema-aware assertions and edge cases
-- `PlaywrightGenerator` for TypeScript E2E projects from routes + CUJs
-- `TestValidator` with syntax checking and LLM auto-fix
-- `generate all` and `generate e2e` CLI commands
-- `plan-run --generate` pipeline integration
+## Upcoming Phases
 
-### Phase 3: Intelligent Test Orchestration
-- Unified test runners (pytest, Playwright, Behave) with JUnit parsing
-- `RunOrchestrator` for config-driven suite execution with retry
-- `FailureDiagnostics` with heuristic + LLM failure analysis
-- `run-all` CLI command
+### Phase 5: Hardening & Test Coverage
+- **Status:** Not Started
+- **Description:** Fill test coverage gaps across core modules, harden utilities, improve reliability of the framework itself.
+- **Key Deliverables:**
+  - Tests for untested modules (behave_runner, evidence/writer, tools, autofix, command modules, API routes)
+  - Config utility coverage (detect, templates, legacy)
+  - Repo package coverage (cache, validator)
 
-### Phase 4: Enhanced Analysis
-- AST-based route discovery for FastAPI, Flask, Django (+ Next.js migration)
-- `FrameworkParser` ABC with normalized `RouteParam` model
-- Pluggable risk rule engine: 16 rules (8 security, 4 performance, 4 reliability)
-- `RiskRuleRegistry` with per-route and aggregate evaluation
-- CI/CD template generation for GitHub Actions and GitLab CI
-- `generate ci` CLI command
+### Phase 6: Custom Risk Rules via YAML
+- **Status:** Not Started
+- **Description:** Allow users to define custom risk rules in YAML without writing Python code, extending the pluggable rule engine.
+- **Key Deliverables:**
+  - YAML rule schema and loader
+  - Integration with RiskRuleRegistry
+  - Documentation and example rules
 
-### Earlier Work (Sprints 1-3, Oct 2025)
-- Evidence collection pipeline (flake8, pylint, bandit, pip-audit, git-churn, coverage)
-- CLI (Typer) with 40+ commands
-- MCP server with 12+ tools
-- Route discovery from OpenAPI specs and Next.js App Router
-- Risk assessment engine with CUJ integration
-- Test generation: Behave BDD, pytest stubs, test data via Faker
-- Reporting: Markdown, HTML dashboard
-- Web UI with WebSocket updates
-- Target/workspace management system
-- FastAPI REST API for evidence/runs
+### Phase 7: Parallel Test Execution
+- **Status:** Not Started
+- **Description:** Run test suites concurrently across runners for faster feedback loops.
+- **Key Deliverables:**
+  - Concurrent suite execution in RunOrchestrator
+  - Result aggregation from parallel runs
+  - Resource-aware scheduling (CPU, browser instances)
 
-## Future Directions
+### Phase 8: Coverage Gap Analysis
+- **Status:** Not Started
+- **Description:** Map JUnit test results back to discovered routes and source code, identifying untested paths and coverage holes.
+- **Key Deliverables:**
+  - JUnit-to-route mapping engine
+  - Coverage gap report generation
+  - Integration with `analyze` and `report` commands
 
-- Broader language support (Go, Ruby, Rust route parsers)
-- Custom risk rule authoring via YAML
-- Test coverage gap analysis from JUnit + source mapping
-- Parallel test execution across runners
-- RAG-powered context-aware test generation
+### Phase 9: RAG-Powered Test Generation
+- **Status:** Not Started
+- **Description:** Index repository code, docs, and specs to provide rich context for LLM-powered test generation.
+- **Key Deliverables:**
+  - Document/code indexing pipeline
+  - RAG retrieval for test generation context
+  - Enhanced LLMTestEnhancer with retrieval
+
+### Phase 10: New Language Parsers
+- **Status:** Not Started
+- **Description:** Extend route discovery to Go, Ruby, and Rust web frameworks.
+- **Key Deliverables:**
+  - Go parser (net/http, Gin, Echo)
+  - Ruby parser (Rails, Sinatra)
+  - Rust parser (Actix, Axum)
+
+### Phase 11: Notifications & Reporting
+- **Status:** Not Started
+- **Description:** Integrate Slack/email notifications for CI findings summaries and expand reporting capabilities.
+- **Key Deliverables:**
+  - Slack webhook integration
+  - Email notification support
+  - CI-friendly summary output formats
+
+## Decision Log
+See `docs/decision_log.md`
+
+## Getting Started
+1. Use `/handoff-phase` to check current phase
+2. Use `/handoff-plan create [phase]` to start planning
+3. Use `/handoff-status` for project overview
