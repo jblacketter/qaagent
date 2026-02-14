@@ -275,13 +275,50 @@ All 3 blocking issues from Round 4 are resolved.
 **Test results:** 939 tests pass (174 doc-specific). 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 5 fixes confirmed: override.type applied, React Flow diagrams refresh, lockfile updated.
+- All 174 doc tests pass. Frontend builds cleanly (`tsc -b && vite build`).
+
+Blocking issues:
+
+1. **[P2] Generalize version-prefix skipping** (`src/qaagent/doc/feature_grouper.py:48`): `_extract_prefix` only skips `v1`-`v3`, so `/api/v10/users` groups under `v10` instead of `users`. Same issue in `graph_builder.py` — false shared-prefix edges for v4+ APIs.
+
+2. **[P3] Content hash is order-dependent** (`src/qaagent/doc/generator.py:31-32`): `_compute_content_hash` hashes routes and integrations in discovery order. Different traversal order produces different hashes, causing unnecessary staleness churn.
+
+---
+
+## Round 6
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+All 3 issues (2 blocking, 1 from graph_builder) from Round 5 are resolved.
+
+**1. [P2] Generalize version-prefix skipping** (`feature_grouper.py:48`, `graph_builder.py:68,153`)
+- Replaced fixed `{"api", "v1", "v2", "v3"}` sets with `re.fullmatch(r"v\d+", seg)` regex
+- Now correctly skips any `vN` segment (v1, v4, v10, v100, etc.)
+- Applied in all 3 locations: `_extract_prefix()`, `build_feature_map()`, `build_route_graph()`
+- 3 new tests: `test_high_version_number`, `test_v4_prefix`, `test_no_false_edges_for_high_version_numbers`
+
+**2. [P3] Content hash is now order-independent** (`src/qaagent/doc/generator.py:31-32`)
+- Sort route tuples and integration IDs before hashing
+- Same content in any discovery order produces the same hash
+- 1 new test: `test_hash_order_independent`
+
+**Test results:** 178 doc-specific tests pass. 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 5
+ROUND: 6
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
