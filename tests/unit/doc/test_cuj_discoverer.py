@@ -48,6 +48,14 @@ class TestAuthFlowDetection:
         cujs = discover_cujs(features)
         assert not any(c.pattern == "auth_flow" for c in cujs)
 
+    def test_no_false_positive_from_auth_prefix_only(self):
+        """A codebase with only /auth/register (no login) should not detect an auth flow."""
+        features = [_make_feature("auth", "Auth", routes=[
+            _make_route("/auth/register", "POST"),
+        ])]
+        cujs = discover_cujs(features)
+        assert not any(c.pattern == "auth_flow" for c in cujs)
+
     def test_partial_auth_flow(self):
         features = [_make_feature("auth", "Auth", routes=[
             _make_route("/api/login", "POST"),

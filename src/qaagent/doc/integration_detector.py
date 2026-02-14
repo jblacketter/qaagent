@@ -154,7 +154,7 @@ class IntegrationDetector:
         try:
             source = filepath.read_text(encoding="utf-8", errors="ignore")
             tree = ast.parse(source, filename=str(filepath))
-        except (SyntaxError, ValueError):
+        except (SyntaxError, ValueError, OSError):
             return
 
         self._check_imports(tree)

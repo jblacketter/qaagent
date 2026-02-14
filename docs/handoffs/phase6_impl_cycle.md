@@ -156,12 +156,54 @@ All 4 blocking issues from Round 1 are resolved, plus the non-blocking virtualen
 **Test results:** 931 tests pass (166 doc-specific, 6 new tests added this round). 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 1 fixes confirmed: API regeneration passes doc_settings/openapi, CLI uses configured spec, feature grouper merges duplicates, --merge persists.
+- All 166 tests pass.
+
+Blocking issues:
+
+1. **[P2] False auth flow detection from "auth" keyword** (`src/qaagent/doc/cuj_discoverer.py:67`): Using "auth" as a login keyword causes false positives — a codebase with only `POST /auth/register` (no login route) still detects an auth flow using register as the login step.
+
+2. **[P2] Unreadable Python files crash integration scanning** (`src/qaagent/doc/integration_detector.py:154-157`): `_scan_python_file` catches parse errors but not filesystem read errors (PermissionError), so a single unreadable `.py` file aborts doc generation entirely.
+
+3. **[P3] Wildcard route-prefix counting inflates stats** (`src/qaagent/doc/graph_builder.py:210-212`): Path params like `{id}` match any static prefix segment, so `/users/{id}` gets counted under `/users/orders`. This inflates route_count in route-graph nodes.
+
+---
+
+## Round 3
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+All 3 blocking issues from Round 2 are resolved.
+
+**1. [P2] Removed "auth" from login keywords** (`src/qaagent/doc/cuj_discoverer.py:67`)
+- Removed generic "auth" keyword from login route matching
+- Login detection now requires specific keywords: "login", "signin", "authenticate"
+- 1 new test: `test_no_false_positive_from_auth_prefix_only`
+
+**2. [P2] Handle filesystem errors in integration scanning** (`src/qaagent/doc/integration_detector.py:157`)
+- Added `OSError` to the except clause in `_scan_python_file`
+- Unreadable files are silently skipped, matching JS scanner behavior
+
+**3. [P3] Fixed wildcard route-prefix counting** (`src/qaagent/doc/graph_builder.py:200-215`)
+- Path param segments are filtered out before prefix comparison
+- `/users/{id}/profile` no longer falsely matches prefix `/users/orders`
+- 4 new tests in `TestPathMatchesPrefix` class
+
+**Test results:** 936 tests pass (171 doc-specific). 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 2
+ROUND: 3
 STATE: in-progress
 <!-- /CYCLE_STATUS -->

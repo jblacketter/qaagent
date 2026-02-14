@@ -198,17 +198,24 @@ def build_route_graph(doc: AppDocumentation) -> tuple[list[ArchitectureNode], li
 
 
 def _path_matches_prefix(path: str, prefix: str) -> bool:
-    """Check if a path starts with a given prefix, ignoring api/version segments."""
-    # Normalize both paths
+    """Check if a path starts with a given prefix, ignoring api/version segments.
+
+    Path param segments (e.g. {id}) in the path are skipped during comparison
+    rather than treated as wildcards, so /users/{id}/profile does NOT match
+    the prefix /users/orders.
+    """
     skip = {"api", "v1", "v2", "v3"}
     path_segs = [s for s in path.strip("/").split("/") if s not in skip]
     prefix_segs = [s for s in prefix.strip("/").split("/") if s not in skip]
 
-    if len(path_segs) < len(prefix_segs):
+    # Filter out path param segments from the path for comparison
+    path_static = [s for s in path_segs if not s.startswith("{")]
+
+    if len(path_static) < len(prefix_segs):
         return False
 
-    for ps, xs in zip(prefix_segs, path_segs):
-        if ps != xs and not xs.startswith("{"):
+    for ps, xs in zip(prefix_segs, path_static):
+        if ps != xs:
             return False
 
     return True

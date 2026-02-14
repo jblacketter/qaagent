@@ -64,7 +64,7 @@ def _find_route(index: _RouteIndex, keywords: List[str], method: Optional[str] =
 def _detect_auth_flow(index: _RouteIndex) -> Optional[DiscoveredCUJ]:
     """Detect auth flow: register → login → access protected → logout."""
     register = _find_route(index, ["register", "signup", "sign"], "POST")
-    login = _find_route(index, ["login", "signin", "authenticate", "auth"], "POST")
+    login = _find_route(index, ["login", "signin", "authenticate"], "POST")
     logout = _find_route(index, ["logout", "signout"], "POST") or _find_route(index, ["logout", "signout"], "DELETE")
 
     if not login:

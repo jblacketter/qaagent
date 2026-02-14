@@ -230,3 +230,22 @@ class TestBuildAllGraphs:
         edge_types = {e.type for e in result.architecture_edges}
         assert any(t.startswith("feature_map:") for t in edge_types)
         assert any(t.startswith("integration_map:") for t in edge_types)
+
+
+class TestPathMatchesPrefix:
+    def test_simple_match(self):
+        from qaagent.doc.graph_builder import _path_matches_prefix
+        assert _path_matches_prefix("/users/{id}", "/users") is True
+
+    def test_no_match(self):
+        from qaagent.doc.graph_builder import _path_matches_prefix
+        assert _path_matches_prefix("/orders/123", "/users") is False
+
+    def test_param_does_not_wildcard_match_other_prefix(self):
+        """Path params should not match as wildcards against different prefix segments."""
+        from qaagent.doc.graph_builder import _path_matches_prefix
+        assert _path_matches_prefix("/users/{id}/profile", "/users/orders") is False
+
+    def test_nested_match(self):
+        from qaagent.doc.graph_builder import _path_matches_prefix
+        assert _path_matches_prefix("/users/{id}/profile", "/users") is True
