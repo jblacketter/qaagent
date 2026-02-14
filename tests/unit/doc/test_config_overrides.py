@@ -114,6 +114,20 @@ class TestApplyDocSettings:
         result_int, _ = _apply_doc_settings(settings, [], [])
         assert result_int[0].type == IntegrationType.UNKNOWN
 
+    def test_duplicate_config_overrides_merge(self):
+        """Repeated overrides with the same name should merge, not duplicate."""
+        settings = DocSettings(
+            integrations=[
+                DocIntegrationOverride(name="Redis", type="database", env_vars=["REDIS_URL"]),
+                DocIntegrationOverride(name="Redis", type="database", env_vars=["REDIS_PASS"]),
+            ],
+        )
+        result_int, _ = _apply_doc_settings(settings, [], [])
+        redis_entries = [i for i in result_int if i.id == "redis"]
+        assert len(redis_entries) == 1, f"Expected 1 Redis entry, got {len(redis_entries)}"
+        assert "REDIS_URL" in redis_entries[0].env_vars
+        assert "REDIS_PASS" in redis_entries[0].env_vars
+
 
 class TestGenerateWithDocSettings:
     def test_custom_summary(self):

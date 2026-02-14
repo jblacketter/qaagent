@@ -100,6 +100,7 @@ def _apply_doc_settings(
                 connected_features=override.connected_features,
                 source="config",
             ))
+            existing_ids.add(iid)
 
     # Exclude features by pattern
     import fnmatch

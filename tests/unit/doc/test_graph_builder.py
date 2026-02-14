@@ -249,3 +249,22 @@ class TestPathMatchesPrefix:
     def test_nested_match(self):
         from qaagent.doc.graph_builder import _path_matches_prefix
         assert _path_matches_prefix("/users/{id}/profile", "/users") is True
+
+
+class TestFeatureMapVersionedPaths:
+    def test_no_false_shared_prefix_edges_for_versioned_apis(self):
+        """Versioned paths like /api/v1/users and /api/v1/orders should NOT create
+        a shared_prefix edge just because they share 'api' or 'v1'."""
+        doc = _make_doc(
+            features=[
+                FeatureArea(id="users", name="Users", routes=[
+                    RouteDoc(path="/api/v1/users", method="GET", auth_required=False),
+                ]),
+                FeatureArea(id="orders", name="Orders", routes=[
+                    RouteDoc(path="/api/v1/orders", method="GET", auth_required=False),
+                ]),
+            ],
+        )
+        nodes, edges = build_feature_map(doc)
+        shared_edges = [e for e in edges if e.type == "shared_prefix"]
+        assert len(shared_edges) == 0, f"Unexpected shared_prefix edges: {shared_edges}"

@@ -65,10 +65,14 @@ def build_feature_map(doc: AppDocumentation) -> tuple[list[ArchitectureNode], li
                     ))
 
     # Create edges for features with overlapping route prefixes
+    skip_segments = {"api", "v1", "v2", "v3"}
     prefixes: dict[str, list[str]] = {}
     for feature in doc.features:
         for route in feature.routes:
-            segments = [s for s in route.path.strip("/").split("/") if s and not s.startswith("{")]
+            segments = [
+                s for s in route.path.strip("/").split("/")
+                if s and not s.startswith("{") and s not in skip_segments
+            ]
             prefix = segments[0] if segments else "root"
             prefixes.setdefault(prefix, [])
             if feature.id not in prefixes[prefix]:
