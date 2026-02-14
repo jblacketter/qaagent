@@ -28,8 +28,8 @@ APPDOC_FILENAME = "appdoc.json"
 def _compute_content_hash(routes: List[Route], integrations: List[Integration]) -> str:
     """Compute a content hash for staleness detection."""
     data = {
-        "routes": [(r.method, r.path) for r in routes],
-        "integrations": [i.id for i in integrations],
+        "routes": sorted((r.method, r.path) for r in routes),
+        "integrations": sorted(i.id for i in integrations),
     }
     raw = json.dumps(data, sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]

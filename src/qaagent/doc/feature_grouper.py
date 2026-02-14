@@ -44,10 +44,10 @@ def _extract_prefix(path: str) -> str:
     """
     # Strip leading slash, split segments
     segments = [s for s in path.strip("/").split("/") if s]
-    # Skip common prefixes like 'api', 'v1', 'v2', etc.
-    skip = {"api", "v1", "v2", "v3"}
+    # Skip common prefixes like 'api', 'v1', 'v2', 'v10', etc.
+    import re
     for seg in segments:
-        if seg in skip:
+        if seg == "api" or re.fullmatch(r"v\d+", seg):
             continue
         # Stop at path params
         if seg.startswith("{"):

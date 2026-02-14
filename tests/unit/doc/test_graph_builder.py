@@ -268,3 +268,19 @@ class TestFeatureMapVersionedPaths:
         nodes, edges = build_feature_map(doc)
         shared_edges = [e for e in edges if e.type == "shared_prefix"]
         assert len(shared_edges) == 0, f"Unexpected shared_prefix edges: {shared_edges}"
+
+    def test_no_false_edges_for_high_version_numbers(self):
+        """Routes under /api/v10/ should not create shared_prefix edges from 'v10'."""
+        doc = _make_doc(
+            features=[
+                FeatureArea(id="users", name="Users", routes=[
+                    RouteDoc(path="/api/v10/users", method="GET", auth_required=False),
+                ]),
+                FeatureArea(id="orders", name="Orders", routes=[
+                    RouteDoc(path="/api/v10/orders", method="GET", auth_required=False),
+                ]),
+            ],
+        )
+        nodes, edges = build_feature_map(doc)
+        shared_edges = [e for e in edges if e.type == "shared_prefix"]
+        assert len(shared_edges) == 0, f"Unexpected shared_prefix edges: {shared_edges}"

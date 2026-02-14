@@ -237,3 +237,13 @@ class TestContentHash:
         h1 = _compute_content_hash(routes, [])
         h2 = _compute_content_hash(routes, i1)
         assert h1 != h2
+
+    def test_hash_order_independent(self):
+        """Hash should be the same regardless of route/integration order."""
+        r1 = Route(path="/a", method="GET", auth_required=False)
+        r2 = Route(path="/b", method="POST", auth_required=False)
+        i1 = Integration(id="redis", name="Redis", type=IntegrationType.DATABASE)
+        i2 = Integration(id="stripe", name="Stripe", type=IntegrationType.SDK)
+        h_forward = _compute_content_hash([r1, r2], [i1, i2])
+        h_reverse = _compute_content_hash([r2, r1], [i2, i1])
+        assert h_forward == h_reverse

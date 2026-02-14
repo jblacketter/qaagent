@@ -30,6 +30,12 @@ class TestExtractPrefix:
     def test_health_check(self):
         assert _extract_prefix("/health") == "health"
 
+    def test_high_version_number(self):
+        assert _extract_prefix("/api/v10/users") == "users"
+
+    def test_v4_prefix(self):
+        assert _extract_prefix("/api/v4/orders/{id}") == "orders"
+
 
 class TestSlugify:
     def test_simple(self):
