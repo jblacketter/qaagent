@@ -72,8 +72,8 @@ def _apply_doc_settings(
     # Merge manual integration overrides
     existing_ids = {i.id for i in integrations}
     for override in doc_settings.integrations:
-        from .integration_detector import _slugify, IntegrationType
-        iid = _slugify(override.name)
+        from .integration_detector import _slugify, _canonical_id, IntegrationType
+        iid = _canonical_id(_slugify(override.name))
         if iid in existing_ids:
             # Merge: update existing
             for existing in integrations:
