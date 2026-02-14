@@ -95,11 +95,15 @@ class RegenerateRequest(BaseModel):
 @router.post("/doc/regenerate")
 def regenerate_doc(request: RegenerateRequest) -> AppDocumentation:
     """Regenerate application documentation."""
+    doc_settings = None
+    openapi_path = None
     try:
         from qaagent.config import load_active_profile
         entry, profile = load_active_profile()
         project_root = entry.resolved_path()
         app_name = profile.project.name
+        doc_settings = profile.doc
+        openapi_path = profile.resolve_spec_path(project_root)
     except Exception:
         project_root = Path.cwd()
         app_name = project_root.name
@@ -108,8 +112,10 @@ def regenerate_doc(request: RegenerateRequest) -> AppDocumentation:
 
     doc = generate_documentation(
         source_dir=source_dir,
+        openapi_path=openapi_path,
         app_name=app_name,
         use_llm=not request.no_llm,
+        doc_settings=doc_settings,
     )
     save_documentation(doc, project_root)
     return doc

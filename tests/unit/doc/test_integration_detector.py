@@ -231,3 +231,21 @@ class TestEdgeCases:
         detector = IntegrationDetector()
         integrations = detector.detect(tmp_source)
         assert len(integrations) == 0
+
+    def test_skips_virtualenv(self, tmp_source):
+        """Python files inside .venv should not be scanned."""
+        venv = tmp_source / ".venv" / "lib" / "python3.11" / "site-packages" / "pkg"
+        venv.mkdir(parents=True)
+        (venv / "mod.py").write_text("import stripe\n")
+        detector = IntegrationDetector()
+        integrations = detector.detect(tmp_source)
+        assert len(integrations) == 0
+
+    def test_skips_pycache(self, tmp_source):
+        """Python files inside __pycache__ should not be scanned."""
+        cache = tmp_source / "__pycache__"
+        cache.mkdir(parents=True)
+        (cache / "client.py").write_text("import boto3\n")
+        detector = IntegrationDetector()
+        integrations = detector.detect(tmp_source)
+        assert len(integrations) == 0

@@ -125,15 +125,20 @@ class IntegrationDetector:
         if not source_dir.exists():
             return []
 
-        # Scan Python files
+        # Directories to skip during scanning
+        skip_dirs = {".venv", "venv", "site-packages", "__pycache__", ".git", ".tox", ".mypy_cache"}
+
+        # Scan Python files (skip virtualenvs and vendor dirs)
         for py_file in source_dir.rglob("*.py"):
+            if skip_dirs.intersection(py_file.parts):
+                continue
             self._scan_python_file(py_file)
 
         # Scan JS/TS files for env var patterns
+        js_skip = skip_dirs | {"node_modules"}
         for ext in ("*.js", "*.ts", "*.jsx", "*.tsx"):
             for js_file in source_dir.rglob(ext):
-                # Skip node_modules
-                if "node_modules" in str(js_file):
+                if js_skip.intersection(js_file.parts):
                     continue
                 self._scan_js_env_vars(js_file)
 

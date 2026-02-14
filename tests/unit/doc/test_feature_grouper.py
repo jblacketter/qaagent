@@ -156,3 +156,29 @@ class TestGroupRoutes:
         features = group_routes(routes)
         assert features[0].id == "a-feature"
         assert features[1].id == "z-feature"
+
+    def test_merges_tagged_and_untagged_with_same_slug(self):
+        """Tagged and untagged routes with the same slug should merge into one feature."""
+        routes = [
+            self._make_route("/users", "GET", tags=["users"]),
+            self._make_route("/users/{id}", "POST", tags=[]),
+        ]
+        features = group_routes(routes)
+        assert len(features) == 1
+        assert features[0].id == "users"
+        assert len(features[0].routes) == 2
+
+    def test_no_duplicate_feature_ids(self):
+        """Ensure no duplicate feature IDs when tagged and prefix groups collide."""
+        routes = [
+            self._make_route("/users", "GET", tags=["users"]),
+            self._make_route("/users", "POST", tags=["users"]),
+            self._make_route("/users/{id}", "GET", tags=[]),
+            self._make_route("/users/{id}", "DELETE", tags=[]),
+        ]
+        features = group_routes(routes)
+        ids = [f.id for f in features]
+        assert len(ids) == len(set(ids)), f"Duplicate feature IDs found: {ids}"
+        assert "users" in ids
+        users = [f for f in features if f.id == "users"][0]
+        assert len(users.routes) == 4

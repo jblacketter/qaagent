@@ -85,16 +85,25 @@ def group_routes(routes: List[Route]) -> List[FeatureArea]:
         prefix = _extract_prefix(route.path)
         prefix_groups[prefix].append(route)
 
-    # Build feature areas from tagged groups
-    features: list[FeatureArea] = []
+    # Merge tagged and prefix groups that share the same slug to avoid
+    # duplicate feature IDs (e.g. tagged "users" + untagged /users/{id}).
+    merged: dict[str, list[Route]] = defaultdict(list)
+    merged_names: dict[str, str] = {}
 
     for tag, tag_routes in sorted(tagged.items()):
-        feature = _build_feature(tag, tag_routes)
-        features.append(feature)
+        slug = _slugify(tag)
+        merged[slug].extend(tag_routes)
+        merged_names.setdefault(slug, tag)
 
-    # Build feature areas from prefix groups
     for prefix, prefix_routes in sorted(prefix_groups.items()):
-        feature = _build_feature(prefix, prefix_routes)
+        slug = _slugify(prefix)
+        merged[slug].extend(prefix_routes)
+        merged_names.setdefault(slug, prefix)
+
+    # Build feature areas from merged groups
+    features: list[FeatureArea] = []
+    for slug in sorted(merged):
+        feature = _build_feature(merged_names[slug], merged[slug])
         features.append(feature)
 
     return features

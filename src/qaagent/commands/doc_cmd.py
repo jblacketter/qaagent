@@ -24,17 +24,21 @@ def doc_generate(
     from qaagent.doc.generator import generate_documentation, save_documentation
 
     doc_settings = None
+    openapi_path = None
     try:
         active_entry, active_profile = load_active_profile()
         project_root = active_entry.resolved_path()
         app_name = active_profile.project.name
         doc_settings = active_profile.doc
+        if not openapi:
+            openapi_path = active_profile.resolve_spec_path(project_root)
     except Exception:
         project_root = Path.cwd()
         app_name = project_root.name
 
     source_dir = Path(source) if source else project_root
-    openapi_path = Path(openapi) if openapi else None
+    if openapi:
+        openapi_path = Path(openapi)
 
     console.print(f"[cyan]Generating documentation for {app_name}...[/cyan]")
 
@@ -220,18 +224,40 @@ def doc_cujs(
         raise typer.Exit(code=1)
 
     if merge:
+        import yaml
+
         cuj_yaml_path = project_root / "handoff" / "cuj.yaml"
         config = to_cuj_config(discovered)
+        existing_data: dict = {}
         existing_ids: set[str] = set()
 
         if cuj_yaml_path.exists():
             from qaagent.analyzers.cuj_config import CUJConfig as ExistingConfig
             existing = ExistingConfig.load(cuj_yaml_path)
             existing_ids = {j.id for j in existing.journeys}
+            existing_data = yaml.safe_load(cuj_yaml_path.read_text(encoding="utf-8")) or {}
 
         new_journeys = [j for j in config.journeys if j.id not in existing_ids]
         if new_journeys:
-            console.print(f"\n[green]Would add {len(new_journeys)} new CUJ(s) to {cuj_yaml_path}[/green]")
+            # Append new journeys to existing YAML data
+            existing_journeys = existing_data.get("journeys", [])
+            for j in new_journeys:
+                existing_journeys.append({
+                    "id": j.id,
+                    "name": j.name,
+                    "components": j.components,
+                    "apis": j.apis,
+                    "acceptance": j.acceptance,
+                })
+            existing_data.setdefault("product", config.product)
+            existing_data["journeys"] = existing_journeys
+
+            cuj_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+            cuj_yaml_path.write_text(
+                yaml.dump(existing_data, default_flow_style=False, sort_keys=False),
+                encoding="utf-8",
+            )
+            console.print(f"\n[green]Added {len(new_journeys)} new CUJ(s) to {cuj_yaml_path}[/green]")
             for j in new_journeys:
                 console.print(f"  + {j.name}")
         else:

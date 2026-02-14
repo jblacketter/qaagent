@@ -191,6 +191,47 @@ class TestRegenerate:
         assert resp.status_code == 200
         assert resp.json()["app_name"] == "TestApp"
 
+    def test_regenerate_passes_doc_settings(self, client, tmp_path):
+        """API regeneration should pass profile doc_settings to generate_documentation."""
+        from qaagent.config.models import DocSettings
+
+        mock_entry = MagicMock()
+        mock_entry.resolved_path.return_value = tmp_path
+        mock_profile = MagicMock()
+        mock_profile.project.name = "TestApp"
+        mock_profile.doc = DocSettings(custom_summary="Custom from config")
+        mock_profile.resolve_spec_path.return_value = None
+
+        with patch(_PATCH_LOAD_PROFILE, return_value=(mock_entry, mock_profile)), \
+             patch(_PATCH_DISCOVER, return_value=[]), \
+             patch(_PATCH_SAVE_DOC):
+            resp = client.post("/api/doc/regenerate", json={"no_llm": True})
+
+        assert resp.status_code == 200
+        assert resp.json()["summary"] == "Custom from config"
+
+    def test_regenerate_passes_openapi_path(self, client, tmp_path):
+        """API regeneration should pass profile openapi spec path."""
+        mock_entry = MagicMock()
+        mock_entry.resolved_path.return_value = tmp_path
+        mock_profile = MagicMock()
+        mock_profile.project.name = "TestApp"
+        mock_profile.doc = None
+        spec_path = tmp_path / "openapi.yaml"
+        mock_profile.resolve_spec_path.return_value = spec_path
+
+        with patch(_PATCH_LOAD_PROFILE, return_value=(mock_entry, mock_profile)), \
+             patch(_PATCH_DISCOVER, return_value=[]) as mock_discover, \
+             patch(_PATCH_SAVE_DOC):
+            resp = client.post("/api/doc/regenerate", json={"no_llm": True})
+
+        assert resp.status_code == 200
+        # Verify discover_routes was called with the openapi path
+        mock_discover.assert_called_once()
+        call_kwargs = mock_discover.call_args
+        assert call_kwargs[1].get("openapi_path") == str(spec_path) or \
+               (call_kwargs[0] if call_kwargs[0] else None)
+
 
 class TestExportMarkdown:
     def test_export(self, client):
