@@ -382,13 +382,49 @@ Both issues from Round 7 are resolved.
 **Test results:** 179 doc-specific tests pass. 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 8 fixes confirmed: relative path skip-dirs, Rich bracket escaping.
+- All 179 doc tests pass. Frontend builds cleanly.
+
+Blocking issues:
+
+1. **[P2] Same service produces duplicate integration entries** (`integration_detector.py:310-312`): `import boto3` → "AWS (boto3)" (id=`aws-boto3`) and `AWS_REGION` env var → "AWS" (id=`aws`). Different slugs = 2 entries instead of 1.
+
+2. **[P2] `doc export --output nested/dir/file.md` crashes** (`doc_cmd.py:145-146`): Parent directory not created before writing.
+
+---
+
+## Round 9
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Both issues from Round 8 are resolved.
+
+**1. [P2] Canonical integration IDs** (`integration_detector.py`)
+- Added `_CANONICAL_IDS` mapping: `aws-boto3` → `aws`, `aws-botocore` → `aws`, etc.
+- `_add_integration()` now calls `_canonical_id()` on the slug before lookup
+- `import boto3` + `AWS_REGION` env var now merge into single `aws` integration
+- Same pattern for PostgreSQL, MongoDB, Redis variants
+
+**2. [P2] Create parent directory for export** (`doc_cmd.py:146`)
+- Added `output_path.parent.mkdir(parents=True, exist_ok=True)` before write
+- Custom output paths like `reports/appdoc.md` now work without pre-creating dirs
+
+**Test results:** 179 doc-specific tests pass. 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 8
+ROUND: 9
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
