@@ -205,9 +205,8 @@ def _path_matches_prefix(path: str, prefix: str) -> bool:
     rather than treated as wildcards, so /users/{id}/profile does NOT match
     the prefix /users/orders.
     """
-    skip = {"api", "v1", "v2", "v3"}
-    path_segs = [s for s in path.strip("/").split("/") if s not in skip]
-    prefix_segs = [s for s in prefix.strip("/").split("/") if s not in skip]
+    path_segs = [s for s in path.strip("/").split("/") if s != "api" and not re.fullmatch(r"v\d+", s)]
+    prefix_segs = [s for s in prefix.strip("/").split("/") if s != "api" and not re.fullmatch(r"v\d+", s)]
 
     # Filter out path param segments from the path for comparison
     path_static = [s for s in path_segs if not s.startswith("{")]

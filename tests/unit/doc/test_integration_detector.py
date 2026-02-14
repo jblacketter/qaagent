@@ -249,3 +249,12 @@ class TestEdgeCases:
         detector = IntegrationDetector()
         integrations = detector.detect(tmp_source)
         assert len(integrations) == 0
+
+    def test_skips_dist_directory(self, tmp_source):
+        """JS files inside dist/ should not be scanned."""
+        dist = tmp_source / "dist"
+        dist.mkdir(parents=True)
+        (dist / "bundle.js").write_text('const x = process.env.STRIPE_SECRET_KEY;\n')
+        detector = IntegrationDetector()
+        integrations = detector.detect(tmp_source)
+        assert len(integrations) == 0

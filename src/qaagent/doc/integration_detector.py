@@ -126,7 +126,10 @@ class IntegrationDetector:
             return []
 
         # Directories to skip during scanning
-        skip_dirs = {".venv", "venv", "site-packages", "__pycache__", ".git", ".tox", ".mypy_cache"}
+        skip_dirs = {
+            ".venv", "venv", "site-packages", "__pycache__", ".git", ".tox", ".mypy_cache",
+            "dist", "build", ".next", "out",
+        }
 
         # Scan Python files (skip virtualenvs and vendor dirs)
         for py_file in source_dir.rglob("*.py"):

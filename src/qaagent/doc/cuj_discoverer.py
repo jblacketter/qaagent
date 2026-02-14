@@ -43,7 +43,7 @@ def _extract_keywords(path: str) -> List[str]:
     segments = path.strip("/").split("/")
     keywords = []
     for seg in segments:
-        if seg.startswith("{") or seg in ("api", "v1", "v2", "v3"):
+        if seg.startswith("{") or seg == "api" or re.fullmatch(r"v\d+", seg):
             continue
         # Split on hyphens/underscores too
         for part in re.split(r"[-_]", seg):
