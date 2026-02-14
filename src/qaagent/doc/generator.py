@@ -80,6 +80,11 @@ def _apply_doc_settings(
                 if existing.id == iid:
                     if override.description:
                         existing.description = override.description
+                    if override.type and override.type != "unknown":
+                        try:
+                            existing.type = IntegrationType(override.type)
+                        except ValueError:
+                            pass
                     if override.env_vars:
                         for v in override.env_vars:
                             if v not in existing.env_vars:

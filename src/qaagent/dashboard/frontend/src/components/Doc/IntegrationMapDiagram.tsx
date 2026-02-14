@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -47,8 +47,11 @@ export function IntegrationMapDiagram({ nodes: rawNodes, edges: rawEdges }: Inte
     [rawEdges]
   );
 
-  const [flowNodes, , onNodesChange] = useNodesState(initialNodes);
-  const [flowEdges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(initialNodes);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => { setFlowNodes(initialNodes); }, [initialNodes, setFlowNodes]);
+  useEffect(() => { setFlowEdges(initialEdges); }, [initialEdges, setFlowEdges]);
 
   return (
     <div className="h-[500px] w-full rounded-lg border border-slate-200 dark:border-slate-700">

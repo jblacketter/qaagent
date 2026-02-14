@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ReactFlow,
@@ -46,8 +46,11 @@ export function FeatureMapDiagram({ nodes: rawNodes, edges: rawEdges }: FeatureM
     [rawEdges]
   );
 
-  const [flowNodes, , onNodesChange] = useNodesState(initialNodes);
-  const [flowEdges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(initialNodes);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => { setFlowNodes(initialNodes); }, [initialNodes, setFlowNodes]);
+  useEffect(() => { setFlowEdges(initialEdges); }, [initialEdges, setFlowEdges]);
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
