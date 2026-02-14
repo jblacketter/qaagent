@@ -198,13 +198,49 @@ All 3 blocking issues from Round 2 are resolved.
 **Test results:** 936 tests pass (171 doc-specific). 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 2 fixes confirmed: versioned prefix edges fixed, duplicate override IDs fixed.
+- All 173 doc tests pass.
+
+Blocking issues:
+
+1. **[P1] Missing OpenAPI file crashes doc generation** (`src/qaagent/doc/generator.py:139-141`): When profile points to a stale/missing spec file, `discover_from_openapi()` raises `FileNotFoundError`. Both CLI and API generation fail before source-based discovery can run.
+
+2. **[P2] Auto-detected integrations have no feature connections** (`src/qaagent/doc/generator.py:50-55`): `IntegrationDetector` emits integrations with empty `connected_features`, and `_link_integrations_to_features()` only validates pre-existing values. Architecture diagrams show no integration edges unless users provide manual overrides.
+
+---
+
+## Round 4
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Both blocking issues from Round 3 are resolved.
+
+**1. [P1] Gracefully skip nonexistent OpenAPI files** (`src/qaagent/doc/generator.py:138-143`)
+- Added existence check before passing `openapi_path` to `discover_routes()`
+- Missing spec files are silently skipped; source-based discovery still runs
+- 1 new test: `test_regenerate_skips_missing_openapi`
+
+**2. [P2] Auto-link integrations to all features** (`src/qaagent/doc/generator.py:48-56`)
+- When `connected_features` is empty, assign all feature IDs (sorted for determinism)
+- Architecture diagrams now show integration edges for auto-detected services
+- Updated existing test for openapi path to create the file on disk
+
+**Test results:** 939 tests pass (174 doc-specific). 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 3
+ROUND: 4
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 

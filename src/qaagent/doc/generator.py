@@ -46,13 +46,16 @@ def _link_integrations_to_features(
     If connected_features is set (e.g. from config overrides), we honor that.
     """
     feature_ids = {f.id for f in features}
+    all_feature_ids = sorted(feature_ids)
     for integration in integrations:
         if integration.connected_features:
             # Validate and keep only existing feature IDs
             integration.connected_features = [
                 fid for fid in integration.connected_features if fid in feature_ids
             ]
-        # If no explicit connections, leave empty (UI will show as "global")
+        else:
+            # Connect to all features when scope can't be determined from imports
+            integration.connected_features = list(all_feature_ids)
 
 
 def _apply_doc_settings(
@@ -136,8 +139,12 @@ def generate_documentation(
     """
     # Step 1: Discover routes
     if routes is None:
+        # Only pass openapi_path if the file actually exists
+        effective_openapi = None
+        if openapi_path and Path(openapi_path).exists():
+            effective_openapi = str(openapi_path)
         routes = discover_routes(
-            openapi_path=str(openapi_path) if openapi_path else None,
+            openapi_path=effective_openapi,
             source_path=str(source_dir) if source_dir else None,
         )
 

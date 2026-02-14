@@ -211,13 +211,14 @@ class TestRegenerate:
         assert resp.json()["summary"] == "Custom from config"
 
     def test_regenerate_passes_openapi_path(self, client, tmp_path):
-        """API regeneration should pass profile openapi spec path."""
+        """API regeneration should pass profile openapi spec path when it exists."""
         mock_entry = MagicMock()
         mock_entry.resolved_path.return_value = tmp_path
         mock_profile = MagicMock()
         mock_profile.project.name = "TestApp"
         mock_profile.doc = None
         spec_path = tmp_path / "openapi.yaml"
+        spec_path.write_text("{}")  # Create the file so it's not skipped
         mock_profile.resolve_spec_path.return_value = spec_path
 
         with patch(_PATCH_LOAD_PROFILE, return_value=(mock_entry, mock_profile)), \
@@ -226,11 +227,28 @@ class TestRegenerate:
             resp = client.post("/api/doc/regenerate", json={"no_llm": True})
 
         assert resp.status_code == 200
-        # Verify discover_routes was called with the openapi path
         mock_discover.assert_called_once()
-        call_kwargs = mock_discover.call_args
-        assert call_kwargs[1].get("openapi_path") == str(spec_path) or \
-               (call_kwargs[0] if call_kwargs[0] else None)
+        call_kwargs = mock_discover.call_args[1]
+        assert call_kwargs.get("openapi_path") == str(spec_path)
+
+    def test_regenerate_skips_missing_openapi(self, client, tmp_path):
+        """API regeneration should skip nonexistent OpenAPI spec files."""
+        mock_entry = MagicMock()
+        mock_entry.resolved_path.return_value = tmp_path
+        mock_profile = MagicMock()
+        mock_profile.project.name = "TestApp"
+        mock_profile.doc = None
+        mock_profile.resolve_spec_path.return_value = tmp_path / "missing.yaml"
+
+        with patch(_PATCH_LOAD_PROFILE, return_value=(mock_entry, mock_profile)), \
+             patch(_PATCH_DISCOVER, return_value=[]) as mock_discover, \
+             patch(_PATCH_SAVE_DOC):
+            resp = client.post("/api/doc/regenerate", json={"no_llm": True})
+
+        assert resp.status_code == 200
+        mock_discover.assert_called_once()
+        call_kwargs = mock_discover.call_args[1]
+        assert call_kwargs.get("openapi_path") is None
 
 
 class TestExportMarkdown:
