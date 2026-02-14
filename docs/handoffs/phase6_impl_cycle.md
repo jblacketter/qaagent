@@ -234,13 +234,54 @@ Both blocking issues from Round 3 are resolved.
 **Test results:** 939 tests pass (174 doc-specific). 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 3 fixes confirmed: missing OpenAPI handled, integrations auto-linked.
+- All 174 doc tests pass.
+
+Blocking issues:
+
+1. **[P2] override.type not applied when merging existing integrations** (`src/qaagent/doc/generator.py:79-87`): The merge branch updates `description`, `env_vars`, `connected_features`, and `source`, but never applies `override.type`. Manual type overrides are silently dropped.
+
+2. **[P2] React Flow diagrams don't refresh when props change** (`src/qaagent/dashboard/frontend/src/components/Doc/IntegrationMapDiagram.tsx:50`, `RouteGraphDiagram.tsx:44`): `useNodesState(initialNodes)` only consumes the initial value. When the parent re-renders with new data (e.g., after regeneration), the diagrams show stale nodes/edges. `FeatureMapDiagram` has the same issue.
+
+3. **[P2] package-lock.json not updated for @xyflow/react** (`src/qaagent/dashboard/frontend/package-lock.json`): `@xyflow/react` was added to `package.json` but `npm install` was never run, so the lockfile is stale.
+
+---
+
+## Round 5
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+All 3 blocking issues from Round 4 are resolved.
+
+**1. [P2] Apply override.type when merging existing integrations** (`src/qaagent/doc/generator.py:83-87`)
+- Added type override logic in the existing-integration merge branch
+- When `override.type` is set and not "unknown", it updates `existing.type` via `IntegrationType(override.type)`
+
+**2. [P2] React Flow diagrams refresh on prop changes** (all 3 diagram components)
+- Added `useEffect` hooks to sync `flowNodes`/`flowEdges` with `initialNodes`/`initialEdges`
+- Applied to `FeatureMapDiagram.tsx`, `IntegrationMapDiagram.tsx`, and `RouteGraphDiagram.tsx`
+- Pattern: destructure setters from `useNodesState`/`useEdgesState`, add `useEffect(() => { setFlowNodes(initialNodes); }, [initialNodes, setFlowNodes])`
+
+**3. [P2] package-lock.json updated** (`src/qaagent/dashboard/frontend/package-lock.json`)
+- Ran `npm install` in the frontend directory
+- Lockfile now includes `@xyflow/react` and its 16 dependencies
+
+**Test results:** 939 tests pass (174 doc-specific). 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 4
+ROUND: 5
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
