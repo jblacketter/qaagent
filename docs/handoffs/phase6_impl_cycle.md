@@ -418,13 +418,47 @@ Both issues from Round 8 are resolved.
 **Test results:** 179 doc-specific tests pass. 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 9 fixes confirmed: canonical integration IDs merge boto3+AWS_* correctly, export mkdir works.
+- All 179 doc tests pass. Frontend builds cleanly.
+
+Blocking issues:
+
+1. **[P2] Test trees produce false-positive integrations** (`integration_detector.py:151-154`): `detect()` scans `tests/` which contains imports like `import boto3` and env var strings in fixtures. Running against the qaagent repo itself reports Stripe/Redis/AWS even though production code doesn't use them.
+
+2. **[P2] rglob still traverses skipped directories** (`integration_detector.py:157-166`): `rglob` yields all files then post-filters, so large `.venv` and `node_modules` are fully traversed before being discarded.
+
+---
+
+## Round 10
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Both issues from Round 9 are resolved.
+
+**1. [P2] Exclude test trees from integration detection** (`integration_detector.py:151`)
+- Added `tests`, `test`, `test_data`, `fixtures` to `skip_dirs`
+- Running against qaagent itself now correctly reports only `HTTPX` (actual production dependency)
+
+**2. [P2] Directory-level pruning with os.walk** (`integration_detector.py:156-175`)
+- Replaced `rglob` + post-filter with `os.walk` + in-place `dirnames[:]` pruning
+- Skipped directories are never traversed, significantly faster on large repos
+
+**Test results:** 179 doc-specific tests pass. 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 9
+ROUND: 10
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
