@@ -133,7 +133,7 @@ class IntegrationDetector:
 
         # Scan Python files (skip virtualenvs and vendor dirs)
         for py_file in source_dir.rglob("*.py"):
-            if skip_dirs.intersection(py_file.parts):
+            if skip_dirs.intersection(py_file.relative_to(source_dir).parts):
                 continue
             self._scan_python_file(py_file)
 
@@ -141,7 +141,7 @@ class IntegrationDetector:
         js_skip = skip_dirs | {"node_modules"}
         for ext in ("*.js", "*.ts", "*.jsx", "*.tsx"):
             for js_file in source_dir.rglob(ext):
-                if js_skip.intersection(js_file.parts):
+                if js_skip.intersection(js_file.relative_to(source_dir).parts):
                     continue
                 self._scan_js_env_vars(js_file)
 

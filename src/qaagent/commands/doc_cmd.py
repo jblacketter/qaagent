@@ -100,7 +100,7 @@ def doc_show(
             console.print("\n[bold]Integrations[/bold]")
             for i in doc.integrations:
                 vars_str = ", ".join(i.env_vars) if i.env_vars else "—"
-                console.print(f"  [{i.type.value}] {i.name} — env: {vars_str}")
+                console.print(f"  \\[{i.type.value}] {i.name} — env: {vars_str}")
 
     if section is None or section == "cujs":
         if doc.discovered_cujs:
