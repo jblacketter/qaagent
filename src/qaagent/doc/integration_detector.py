@@ -147,25 +147,31 @@ class IntegrationDetector:
         if not source_dir.exists():
             return []
 
-        # Directories to skip during scanning
+        # Directories to skip during scanning (virtualenvs, build artifacts, test trees)
         skip_dirs = {
             ".venv", "venv", "site-packages", "__pycache__", ".git", ".tox", ".mypy_cache",
-            "dist", "build", ".next", "out",
+            "dist", "build", ".next", "out", "tests", "test", "test_data", "fixtures",
         }
 
-        # Scan Python files (skip virtualenvs and vendor dirs)
-        for py_file in source_dir.rglob("*.py"):
-            if skip_dirs.intersection(py_file.relative_to(source_dir).parts):
-                continue
+        # Walk directory tree with pruning to avoid descending into skipped dirs
+        py_files: list[Path] = []
+        js_exts = {".js", ".ts", ".jsx", ".tsx"}
+        js_files: list[Path] = []
+        for dirpath, dirnames, filenames in os.walk(source_dir):
+            # Prune skipped directories in-place so os.walk doesn't descend
+            dirnames[:] = [d for d in dirnames if d not in skip_dirs and d != "node_modules"]
+            for fname in filenames:
+                fpath = Path(dirpath) / fname
+                if fname.endswith(".py"):
+                    py_files.append(fpath)
+                elif any(fname.endswith(ext) for ext in js_exts):
+                    js_files.append(fpath)
+
+        for py_file in py_files:
             self._scan_python_file(py_file)
 
-        # Scan JS/TS files for env var patterns
-        js_skip = skip_dirs | {"node_modules"}
-        for ext in ("*.js", "*.ts", "*.jsx", "*.tsx"):
-            for js_file in source_dir.rglob(ext):
-                if js_skip.intersection(js_file.relative_to(source_dir).parts):
-                    continue
-                self._scan_js_env_vars(js_file)
+        for js_file in js_files:
+            self._scan_js_env_vars(js_file)
 
         # Scan package.json for JS dependencies
         pkg_json = source_dir / "package.json"
