@@ -112,6 +112,28 @@ def _slugify(text: str) -> str:
     return slug or "unknown"
 
 
+# Canonical ID mapping: slug variants → canonical slug.
+# This ensures that e.g. "AWS (boto3)" (slug "aws-boto3") and "AWS" (slug "aws")
+# merge into a single integration entry instead of producing duplicates.
+_CANONICAL_IDS: Dict[str, str] = {
+    "aws-boto3": "aws",
+    "aws-botocore": "aws",
+    "aws-sdk": "aws",
+    "aws-s3": "aws",
+    "postgresql-async": "postgresql",
+    "postgresql-pg": "postgresql",
+    "mongodb-async": "mongodb",
+    "mongodb-mongoose": "mongodb",
+    "redis-async": "redis",
+    "redis-ioredis": "redis",
+}
+
+
+def _canonical_id(slug: str) -> str:
+    """Return the canonical ID for a slug, or the slug itself if no mapping."""
+    return _CANONICAL_IDS.get(slug, slug)
+
+
 class IntegrationDetector:
     """Detects external integrations from Python/JS source code."""
 
@@ -307,7 +329,8 @@ class IntegrationDetector:
         env_vars: Optional[List[str]] = None,
     ) -> None:
         """Add or merge an integration."""
-        iid = _slugify(name)
+        raw_id = _slugify(name)
+        iid = _canonical_id(raw_id)
         if iid in self._detected:
             existing = self._detected[iid]
             if package and not existing.package:

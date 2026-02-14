@@ -143,6 +143,7 @@ def doc_export(
         raise typer.Exit(code=1)
 
     output_path = Path(output) if output else project_root / default_name
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(content, encoding="utf-8")
     console.print(f"[green]✓[/green] Exported to {output_path}")
 
