@@ -347,13 +347,48 @@ Both issues from Round 6 are resolved.
 **Test results:** 179 doc-specific tests pass. 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 7 fixes confirmed: vN regex applied everywhere, dist/build dirs excluded.
+- All 179 doc tests pass. Frontend builds cleanly.
+
+Blocking issues:
+
+1. **[P2] Skip-dir matching uses absolute path parts** (`integration_detector.py:136`): `skip_dirs.intersection(py_file.parts)` checks against full absolute path, so a repo under `/tmp/build/myrepo` matches "build" and skips all files. Should use `relative_to(source_dir).parts`.
+
+2. **[P3] Rich markup eats integration type brackets** (`doc_cmd.py:103`): `[{i.type.value}]` is parsed as Rich markup, hiding the type label.
+
+---
+
+## Round 8
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Both issues from Round 7 are resolved.
+
+**1. [P2] Relative path skip-dir matching** (`integration_detector.py:136,144`)
+- Changed `py_file.parts` → `py_file.relative_to(source_dir).parts`
+- Same for JS scanning
+- Parent directory names no longer suppress scanning
+
+**2. [P3] Escape Rich brackets in doc show** (`doc_cmd.py:103`)
+- Changed `[{i.type.value}]` → `\\[{i.type.value}]` to escape Rich markup
+- Type label now renders as literal text
+
+**Test results:** 179 doc-specific tests pass. 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 7
+ROUND: 8
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
