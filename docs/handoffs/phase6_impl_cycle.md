@@ -312,13 +312,48 @@ All 3 issues (2 blocking, 1 from graph_builder) from Round 5 are resolved.
 **Test results:** 178 doc-specific tests pass. 0 regressions.
 
 ### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Round 6 fixes confirmed: vN skipping generalized in feature_grouper and graph_builder feature_map/route_graph, content hash order-independent.
+- All 178 doc tests pass. Frontend builds cleanly.
+
+Blocking issues:
+
+1. **[P2] `_path_matches_prefix` still uses fixed v1-v3 set** (`src/qaagent/doc/graph_builder.py:208`): The route_count calculation uses `_path_matches_prefix` which still has `{"api", "v1", "v2", "v3"}`. Routes under `/api/v10/users` get `route_count: 0` because `v10` is not filtered. Same issue in `cuj_discoverer.py:46`.
+
+2. **[P3] Build-output directories not excluded from JS scanning** (`src/qaagent/doc/integration_detector.py:129`): `dist/`, `build/`, `.next/`, `out/` are not in `skip_dirs`, so bundled JS artifacts report false-positive integrations.
+
+---
+
+## Round 7
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Both issues from Round 6 are resolved.
+
+**1. [P2] Generalized vN skipping in _path_matches_prefix and cuj_discoverer** (`graph_builder.py:208`, `cuj_discoverer.py:46`)
+- Replaced fixed `{"api", "v1", "v2", "v3"}` with `re.fullmatch(r"v\d+")` in both locations
+- Route counts and CUJ keyword extraction now handle v4+ APIs correctly
+
+**2. [P3] Build-output directories excluded from scanning** (`integration_detector.py:129`)
+- Added `dist`, `build`, `.next`, `out` to `skip_dirs`
+- Prevents false-positive integrations from bundled JS artifacts
+- 1 new test: `test_skips_dist_directory`
+
+**Test results:** 179 doc-specific tests pass. 0 regressions.
+
+### Reviewer
 _awaiting response_
 
 ---
 
 <!-- CYCLE_STATUS (single source of truth - do not duplicate above) -->
 READY_FOR: reviewer
-ROUND: 6
+ROUND: 7
 STATE: in-progress
 <!-- /CYCLE_STATUS -->
 
