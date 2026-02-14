@@ -96,6 +96,22 @@ class RunSettings(BaseModel):
     )
 
 
+class DocIntegrationOverride(BaseModel):
+    """Manual integration override for doc generation."""
+    name: str
+    type: str = "unknown"
+    description: str = ""
+    env_vars: List[str] = Field(default_factory=list)
+    connected_features: List[str] = Field(default_factory=list)
+
+
+class DocSettings(BaseModel):
+    """Settings for app documentation generation."""
+    integrations: List[DocIntegrationOverride] = Field(default_factory=list)
+    exclude_features: List[str] = Field(default_factory=list)
+    custom_summary: Optional[str] = None
+
+
 class QAAgentProfile(BaseModel):
     project: ProjectSettings
     app: Dict[str, EnvironmentSettings] = Field(default_factory=dict)
@@ -105,6 +121,7 @@ class QAAgentProfile(BaseModel):
     risk_assessment: RiskAssessmentSettings = Field(default_factory=RiskAssessmentSettings)
     llm: Optional[LLMSettings] = None
     run: RunSettings = Field(default_factory=RunSettings)
+    doc: DocSettings = Field(default_factory=DocSettings)
 
     def resolve_spec_path(self, project_root: Path) -> Optional[Path]:
         if not self.openapi.spec_path:

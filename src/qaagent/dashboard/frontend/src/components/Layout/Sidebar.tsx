@@ -9,7 +9,8 @@ import {
   Activity,
   Settings,
   TrendingUp,
-  Target
+  Target,
+  BookOpen,
 } from "lucide-react";
 
 const mainLinks = [
@@ -24,6 +25,7 @@ const repoLinks = [
   { to: "/risks", label: "Risks", icon: Activity },
   { to: "/cuj", label: "CUJ Coverage", icon: Target },
   { to: "/trends", label: "Trends", icon: TrendingUp },
+  { to: "/doc", label: "App Docs", icon: BookOpen },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -40,7 +42,7 @@ export function Sidebar({ variant = "desktop", onLinkClick }: SidebarProps = {})
       : "flex h-full w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900";
 
   // Determine if we're on a repository-specific page
-  const repoPages = ["/dashboard", "/runs", "/risks", "/cuj", "/trends", "/settings"];
+  const repoPages = ["/dashboard", "/runs", "/risks", "/cuj", "/trends", "/doc", "/settings"];
   const isRepoPage = repoPages.some(page => location.pathname.startsWith(page));
 
   const linksToShow = isRepoPage ? repoLinks : mainLinks;

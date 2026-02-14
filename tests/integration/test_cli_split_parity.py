@@ -74,6 +74,10 @@ class TestCommandParity:
         current = _get_command_tree()
         assert current["subgroups"]["workspace"] == snapshot["subgroups"]["workspace"]
 
+    def test_doc_subcommands_match(self, snapshot):
+        current = _get_command_tree()
+        assert current["subgroups"]["doc"] == snapshot["subgroups"]["doc"]
+
     def test_all_subgroups_present(self, snapshot):
         current = _get_command_tree()
         assert set(current["subgroups"].keys()) == set(snapshot["subgroups"].keys()), (
@@ -120,6 +124,22 @@ class TestHelpExitCodes:
 
     def test_workspace_help(self):
         result = runner.invoke(app, ["workspace", "--help"])
+        assert result.exit_code == 0
+
+    def test_doc_help(self):
+        result = runner.invoke(app, ["doc", "--help"])
+        assert result.exit_code == 0
+
+    def test_doc_generate_help(self):
+        result = runner.invoke(app, ["doc", "generate", "--help"])
+        assert result.exit_code == 0
+
+    def test_doc_show_help(self):
+        result = runner.invoke(app, ["doc", "show", "--help"])
+        assert result.exit_code == 0
+
+    def test_doc_export_help(self):
+        result = runner.invoke(app, ["doc", "export", "--help"])
         assert result.exit_code == 0
 
     def test_schemathesis_run_help(self):

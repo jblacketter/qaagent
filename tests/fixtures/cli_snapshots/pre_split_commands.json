@@ -7,6 +7,7 @@
     "api-detect",
     "config",
     "dashboard",
+    "doc",
     "doctor",
     "export-reports",
     "fix",
@@ -62,6 +63,12 @@
       "openapi",
       "test-data",
       "unit-tests"
+    ],
+    "doc": [
+      "cujs",
+      "export",
+      "generate",
+      "show"
     ],
     "workspace": [
       "apply",
