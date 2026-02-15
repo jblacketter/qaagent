@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Optional
 
 from ..openapi_utils import enumerate_operations, load_openapi
 from .models import Route, RouteSource
+from .ui_crawler import crawl_ui_routes, CrawlPage
 
 try:
     from ..discovery.nextjs_parser import NextJsRouteDiscoverer
@@ -131,7 +132,6 @@ def deduplicate_routes(routes: List[Route]) -> List[Route]:
 
         # Merge metadata such as tags
         existing.tags = sorted(set(existing.tags) | set(route.tags))
-        existing.metadata.update(route.metadata)
         for category, items in route.params.items():
             existing.params.setdefault(category, [])
             existing.params[category].extend(
@@ -179,11 +179,11 @@ def discover_from_nextjs(project_root: str | Path) -> List[Route]:
 
 
 def discover_from_source(source_dir: str | Path, framework: Optional[str] = None) -> List[Route]:
-    """Discover routes from Python framework source code.
+    """Discover routes from framework source code.
 
     Args:
         source_dir: Path to source code directory
-        framework: Framework name ("fastapi", "flask", "django"). Auto-detected if not provided.
+        framework: Framework name. Auto-detected if not provided.
 
     Returns:
         List of discovered Route objects
@@ -202,7 +202,7 @@ def discover_from_source(source_dir: str | Path, framework: Optional[str] = None
         validator = RepoValidator(source_path)
         framework = validator.detect_project_type()
 
-    if not framework or framework in ("nextjs", "express"):
+    if not framework or framework in ("nextjs", "express", "generic"):
         return []
 
     parser = get_framework_parser(framework)
@@ -215,11 +215,47 @@ def discover_from_source(source_dir: str | Path, framework: Optional[str] = None
         return []
 
 
+def _routes_from_crawl_pages(pages: List[CrawlPage], crawl_url: str) -> List[Route]:
+    routes: List[Route] = []
+    for page in pages:
+        routes.append(
+            Route(
+                path=page.path,
+                method="GET",
+                auth_required=False,
+                summary=page.title or None,
+                description=f"Runtime-discovered via crawl from {crawl_url}",
+                tags=["runtime", "crawl"],
+                source=RouteSource.RUNTIME,
+                confidence=0.6,
+                metadata={
+                    "crawl_url": crawl_url,
+                    "crawl_depth": page.depth,
+                    "title": page.title,
+                    "internal": page.internal,
+                    "url": page.url,
+                },
+            )
+        )
+    return routes
+
+
 def discover_routes(
     target: Optional[str] = None,
     openapi_path: Optional[str | Path] = None,
     source_path: Optional[str | Path] = None,
     auto_discover_nextjs: bool = False,
+    crawl: bool = False,
+    crawl_url: Optional[str] = None,
+    crawl_depth: int = 2,
+    crawl_max_pages: int = 50,
+    crawl_same_origin: bool = True,
+    crawl_timeout_seconds: float = 20.0,
+    crawl_wait_until: str = "networkidle",
+    crawl_browser: str = "chromium",
+    crawl_headless: bool = True,
+    crawl_headers: Optional[Dict[str, str]] = None,
+    crawl_storage_state_path: Optional[str | Path] = None,
 ) -> List[Route]:
     """Aggregate routes discovered from multiple sources.
 
@@ -228,6 +264,17 @@ def discover_routes(
         openapi_path: Path to OpenAPI spec file
         source_path: Path to source code directory
         auto_discover_nextjs: Auto-discover Next.js App Router routes
+        crawl: Enable runtime UI crawl discovery
+        crawl_url: Starting URL for runtime crawl
+        crawl_depth: Max crawl depth
+        crawl_max_pages: Max pages to visit
+        crawl_same_origin: Restrict links to origin of crawl URL
+        crawl_timeout_seconds: Page navigation timeout
+        crawl_wait_until: Playwright wait_until value
+        crawl_browser: Browser engine
+        crawl_headless: Run crawl headless when true
+        crawl_headers: Optional request headers for crawl context
+        crawl_storage_state_path: Optional storage state path for authenticated crawl sessions
 
     Returns:
         List of discovered Route objects
@@ -250,9 +297,22 @@ def discover_routes(
         if source_routes:
             routes.extend(source_routes)
 
-    if target:
-        # Placeholder for runtime crawling
-        pass
+    if crawl:
+        effective_crawl_url = crawl_url or target
+        if effective_crawl_url:
+            pages = crawl_ui_routes(
+                start_url=effective_crawl_url,
+                max_depth=crawl_depth,
+                max_pages=crawl_max_pages,
+                same_origin=crawl_same_origin,
+                timeout_seconds=crawl_timeout_seconds,
+                wait_until=crawl_wait_until,
+                browser=crawl_browser,
+                headless=crawl_headless,
+                headers=crawl_headers,
+                storage_state_path=crawl_storage_state_path,
+            )
+            routes.extend(_routes_from_crawl_pages(pages, effective_crawl_url))
 
     return deduplicate_routes(routes)
 

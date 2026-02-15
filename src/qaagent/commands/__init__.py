@@ -22,6 +22,8 @@ from .targets_cmd import targets_app, use_target
 from .generate_cmd import generate_app
 from .workspace_cmd import workspace_app
 from .doc_cmd import doc_app
+from .rules_cmd import rules_app
+from .rag_cmd import rag_app
 
 # Register subgroups
 app.add_typer(analyze_app, name="analyze")
@@ -31,6 +33,8 @@ config_app.add_typer(targets_app, name="targets")
 app.add_typer(generate_app, name="generate")
 app.add_typer(workspace_app, name="workspace")
 app.add_typer(doc_app, name="doc")
+app.add_typer(rules_app, name="rules")
+app.add_typer(rag_app, name="rag")
 
 # Dual-registered commands (available both as top-level and within subgroups)
 app.command("use")(use_target)
@@ -39,10 +43,12 @@ app.command("use")(use_target)
 from . import run_cmd
 from . import report_cmd
 from . import misc_cmd
+from . import record_cmd
 
 run_cmd.register(app)
 report_cmd.register(app)
 misc_cmd.register(app)
+record_cmd.register(app)
 
 __all__ = [
     "app",

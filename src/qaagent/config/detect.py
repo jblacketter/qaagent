@@ -29,6 +29,24 @@ def detect_project_type(project_path: Path) -> str:
         if "fastapi" in contents:
             return "fastapi"
 
+    go_mod = project_path / "go.mod"
+    if go_mod.exists():
+        contents = go_mod.read_text(encoding="utf-8").lower()
+        if any(dep in contents for dep in ("gin-gonic/gin", "labstack/echo", "go-chi/chi", "gorilla/mux")):
+            return "go"
+
+    gemfile = project_path / "Gemfile"
+    if gemfile.exists():
+        contents = gemfile.read_text(encoding="utf-8").lower()
+        if "rails" in contents or "sinatra" in contents:
+            return "ruby"
+
+    cargo = project_path / "Cargo.toml"
+    if cargo.exists():
+        contents = cargo.read_text(encoding="utf-8").lower()
+        if "actix-web" in contents or "axum" in contents:
+            return "rust"
+
     return "generic"
 
 

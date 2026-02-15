@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -165,6 +166,62 @@ class TestGenTests:
             ])
         assert result.exit_code == 0
         assert "def test_api" in result.output
+
+    def test_use_rag_missing_index_exits_2(self, tmp_path):
+        spec = tmp_path / "openapi.json"
+        spec.write_text("{}")
+
+        with patch("qaagent.commands.misc_cmd.load_config_compat", return_value=None), \
+             patch("qaagent.commands.misc_cmd.load_openapi", return_value={}):
+            result = runner.invoke(app, ["gen-tests", "--openapi", str(spec), "--use-rag"])
+
+        assert result.exit_code == 2
+        assert "RAG index not found" in result.output
+
+    def test_use_rag_passes_retrieval_context(self, tmp_path):
+        spec = tmp_path / "openapi.json"
+        spec.write_text("{}")
+
+        index_path = tmp_path / "index.json"
+        index_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "chunks": [
+                        {
+                            "chunk_id": "docs/api.md:1",
+                            "path": "docs/api.md",
+                            "text": "POST /pets requires name and species fields",
+                            "start_line": 1,
+                            "end_line": 1,
+                        }
+                    ],
+                }
+            )
+        )
+
+        op = SimpleNamespace(method="POST", path="/pets")
+        with patch("qaagent.commands.misc_cmd.load_config_compat", return_value=None), \
+             patch("qaagent.commands.misc_cmd.load_openapi", return_value={}), \
+             patch("qaagent.commands.misc_cmd.enumerate_operations", return_value=[op]), \
+             patch("qaagent.commands.misc_cmd.generate_api_tests_from_spec", return_value="def test_api(): pass") as mock_generate:
+            result = runner.invoke(
+                app,
+                [
+                    "gen-tests",
+                    "--openapi",
+                    str(spec),
+                    "--use-rag",
+                    "--rag-index",
+                    str(index_path),
+                    "--dry-run",
+                ],
+            )
+
+        assert result.exit_code == 0
+        kwargs = mock_generate.call_args.kwargs
+        assert kwargs["retrieval_context"]
+        assert "docs/api.md:1-1" in kwargs["retrieval_context"][0]
 
 
 class TestWebUi:

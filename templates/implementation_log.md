@@ -1,7 +1,7 @@
 # Implementation Log: [Phase Name]
 
 **Started:** [YYYY-MM-DD]
-**Lead:** {{lead}}
+**Lead:** claude
 **Plan:** docs/phases/[phase_name].md
 
 ## Progress

@@ -86,6 +86,103 @@ class TestSummarize:
         assert out_file.exists()
 
 
+class TestNotify:
+    def test_help(self):
+        result = runner.invoke(app, ["notify", "--help"])
+        assert result.exit_code == 0
+
+    def test_prints_summary_without_targets(self):
+        meta = {
+            "output": "reports/findings.md",
+            "format": "markdown",
+            "summary": {"tests": 4, "failures": 0, "errors": 0, "skipped": 0, "time": 1.2},
+            "extras": {},
+        }
+        with patch("qaagent.commands.report_cmd.generate_report", return_value=meta):
+            result = runner.invoke(app, ["notify"])
+
+        assert result.exit_code == 0
+        assert "Status: PASSED" in result.output
+        assert "No notification targets configured" in result.output
+
+    def test_json_output(self):
+        meta = {
+            "output": "reports/findings.md",
+            "format": "markdown",
+            "summary": {"tests": 4, "failures": 1, "errors": 0, "skipped": 0, "time": 1.2},
+            "extras": {},
+        }
+        with patch("qaagent.commands.report_cmd.generate_report", return_value=meta):
+            result = runner.invoke(app, ["notify", "--output-format", "json"])
+
+        assert result.exit_code == 0
+        assert '"status": "failed"' in result.output
+
+    def test_dry_run_skips_sending(self):
+        meta = {
+            "output": "reports/findings.md",
+            "format": "markdown",
+            "summary": {"tests": 1, "failures": 0, "errors": 0, "skipped": 0, "time": 0.2},
+            "extras": {},
+        }
+        with patch("qaagent.commands.report_cmd.generate_report", return_value=meta), \
+             patch("qaagent.commands.report_cmd.send_slack_webhook") as mock_slack, \
+             patch("qaagent.commands.report_cmd.send_email_smtp") as mock_email:
+            result = runner.invoke(
+                app,
+                ["notify", "--dry-run", "--slack-webhook", "https://example.com", "--email-to", "qa@example.com"],
+            )
+
+        assert result.exit_code == 0
+        mock_slack.assert_not_called()
+        mock_email.assert_not_called()
+
+    def test_sends_slack_and_email(self):
+        meta = {
+            "output": "reports/findings.md",
+            "format": "markdown",
+            "summary": {"tests": 3, "failures": 0, "errors": 0, "skipped": 0, "time": 0.4},
+            "extras": {},
+        }
+        with patch("qaagent.commands.report_cmd.generate_report", return_value=meta), \
+             patch("qaagent.commands.report_cmd.send_slack_webhook") as mock_slack, \
+             patch("qaagent.commands.report_cmd.send_email_smtp") as mock_email:
+            result = runner.invoke(
+                app,
+                [
+                    "notify",
+                    "--slack-webhook",
+                    "https://example.com",
+                    "--email-to",
+                    "qa@example.com",
+                    "--smtp-host",
+                    "smtp.example.com",
+                    "--smtp-user",
+                    "user",
+                    "--email-from",
+                    "from@example.com",
+                ],
+                env={"QAAGENT_SMTP_PASSWORD": "secret"},
+            )
+
+        assert result.exit_code == 0
+        mock_slack.assert_called_once()
+        mock_email.assert_called_once()
+
+    def test_email_requires_smtp_configuration(self):
+        meta = {
+            "output": "reports/findings.md",
+            "format": "markdown",
+            "summary": {"tests": 3, "failures": 0, "errors": 0, "skipped": 0, "time": 0.4},
+            "extras": {},
+        }
+        with patch("qaagent.commands.report_cmd.generate_report", return_value=meta):
+            result = runner.invoke(app, ["notify", "--email-to", "qa@example.com"])
+
+        assert result.exit_code == 2
+        assert "Email notification requires" in result.output
+
+
 class TestOpenReport:
     def test_help(self):
         result = runner.invoke(app, ["open-report", "--help"])

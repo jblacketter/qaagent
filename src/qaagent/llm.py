@@ -168,6 +168,7 @@ def generate_api_tests_from_spec(
     base_url: Optional[str] = None,
     operations: Optional[List[Tuple[str, str]]] = None,
     max_tests: int = 12,
+    retrieval_context: Optional[List[str]] = None,
 ) -> str:
     """Generate pytest + httpx tests for selected operations.
 
@@ -192,6 +193,12 @@ def generate_api_tests_from_spec(
             "BASE_URL = os.environ.get('BASE_URL', '%s')" % (base_url or "http://localhost:8000"),
             "",
         ]
+        if retrieval_context:
+            lines += [
+                "# Retrieval context used to guide generation:",
+                *[f"# - {snippet.splitlines()[0][:120]}" for snippet in retrieval_context[:5]],
+                "",
+            ]
         for i, (method, path, op_id) in enumerate(selected, start=1):
             test_name = op_id or f"{method.lower()}_{path.strip('/').replace('/', '_').replace('{','').replace('}','')}"
             if not test_name:
@@ -214,9 +221,22 @@ def generate_api_tests_from_spec(
         "Return only Python code."
     )
     ops_text = "\n".join([f"- {m} {p} (operationId={op or '-'})" for m, p, op in selected])
+    rag_text = ""
+    if retrieval_context:
+        rag_sections = []
+        for idx, snippet in enumerate(retrieval_context[:8], start=1):
+            rag_sections.append(f"[Context {idx}]\n{snippet[:2000]}")
+        rag_text = "\n\nRepository context snippets:\n" + "\n\n".join(rag_sections)
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": f"Base URL: {base_url or 'http://localhost:8000'}\nOperations:\n{ops_text}"},
+        {
+            "role": "user",
+            "content": (
+                f"Base URL: {base_url or 'http://localhost:8000'}\n"
+                f"Operations:\n{ops_text}"
+                f"{rag_text}"
+            ),
+        },
     ]
     resp = chat(messages)
     content = resp.get("message", {}).get("content") if isinstance(resp, dict) else None

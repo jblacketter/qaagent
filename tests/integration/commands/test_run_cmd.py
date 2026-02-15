@@ -248,6 +248,8 @@ class TestRunAll:
 
     def test_success(self):
         mock_profile = MagicMock()
+        mock_profile.run.parallel = False
+        mock_profile.run.max_workers = None
         mock_entry = MagicMock()
         mock_result = MagicMock()
         mock_result.success = True
@@ -259,7 +261,60 @@ class TestRunAll:
         mock_result.diagnostic_summary = None
         mock_result.run_handle = None
         with patch("qaagent.config.load_active_profile", return_value=(mock_entry, mock_profile)), \
-             patch("qaagent.runners.orchestrator.RunOrchestrator.run_all", return_value=mock_result):
+             patch("qaagent.runners.orchestrator.RunOrchestrator") as MockOrchestrator:
+            MockOrchestrator.return_value.run_all.return_value = mock_result
             result = runner.invoke(app, ["run-all"])
         assert result.exit_code == 0
         assert "ALL PASSED" in result.output
+        MockOrchestrator.assert_called_once()
+        assert MockOrchestrator.call_args.kwargs["parallel"] is False
+        assert MockOrchestrator.call_args.kwargs["max_workers"] is None
+
+    def test_parallel_flag_sets_parallel(self):
+        mock_profile = MagicMock()
+        mock_profile.run.parallel = False
+        mock_profile.run.max_workers = None
+        mock_entry = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.suites = {}
+        mock_result.total_passed = 1
+        mock_result.total_failed = 0
+        mock_result.total_errors = 0
+        mock_result.total_duration = 0.2
+        mock_result.diagnostic_summary = None
+        mock_result.run_handle = None
+
+        with patch("qaagent.config.load_active_profile", return_value=(mock_entry, mock_profile)), \
+             patch("qaagent.runners.orchestrator.RunOrchestrator") as MockOrchestrator:
+            MockOrchestrator.return_value.run_all.return_value = mock_result
+            result = runner.invoke(app, ["run-all", "--parallel"])
+
+        assert result.exit_code == 0
+        assert "in parallel" in result.output
+        assert MockOrchestrator.call_args.kwargs["parallel"] is True
+
+    def test_max_workers_flag_sets_override(self):
+        mock_profile = MagicMock()
+        mock_profile.run.parallel = False
+        mock_profile.run.max_workers = None
+        mock_entry = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.suites = {}
+        mock_result.total_passed = 1
+        mock_result.total_failed = 0
+        mock_result.total_errors = 0
+        mock_result.total_duration = 0.2
+        mock_result.diagnostic_summary = None
+        mock_result.run_handle = None
+
+        with patch("qaagent.config.load_active_profile", return_value=(mock_entry, mock_profile)), \
+             patch("qaagent.runners.orchestrator.RunOrchestrator") as MockOrchestrator:
+            MockOrchestrator.return_value.run_all.return_value = mock_result
+            result = runner.invoke(app, ["run-all", "--parallel", "--max-workers", "3"])
+
+        assert result.exit_code == 0
+        assert "max workers: 3" in result.output
+        assert MockOrchestrator.call_args.kwargs["parallel"] is True
+        assert MockOrchestrator.call_args.kwargs["max_workers"] == 3

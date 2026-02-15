@@ -12,6 +12,7 @@ from qaagent.analyzers.models import Risk, RiskCategory, RiskSeverity, Route
 from qaagent.config.models import AuthSettings, LLMSettings
 from qaagent.generators.base import GenerationResult
 from qaagent.generators.playwright_generator import PlaywrightGenerator
+from qaagent.llm import ChatResponse
 
 
 def _route(path: str = "/pets", method: str = "GET", auth: bool = False) -> Route:
@@ -261,3 +262,20 @@ class TestPlaywrightGenerator:
         # Validation should have run — warnings may be present if npx is unavailable
         # but no errors should prevent generation
         assert isinstance(result.warnings, list)
+
+    def test_cuj_prompt_includes_retrieval_context(self, tmp_path: Path) -> None:
+        gen = PlaywrightGenerator(
+            routes=[_route("/api/auth/login", "POST")],
+            output_dir=tmp_path,
+            llm_settings=LLMSettings(enabled=True, provider="ollama", model="test-model"),
+            retrieval_context=["docs/cuj.md:1-2\nlogin requires MFA"],
+        )
+        mock_enhancer = MagicMock()
+        mock_enhancer._client.chat.return_value = ChatResponse(content="test('x', async () => {})")
+        gen._get_enhancer = lambda: mock_enhancer  # type: ignore[method-assign]
+
+        _ = gen._generate_cuj_steps(_cuj())
+
+        sent_messages = mock_enhancer._client.chat.call_args.args[0]
+        assert "Repository context" in sent_messages[1].content
+        assert "docs/cuj.md" in sent_messages[1].content

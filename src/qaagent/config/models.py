@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -77,6 +77,9 @@ class ExcludeSettings(BaseModel):
 class RiskAssessmentSettings(BaseModel):
     disable_rules: List[str] = Field(default_factory=list)
     severity_thresholds: Dict[str, List[str]] = Field(default_factory=dict)
+    custom_rules: List[Dict[str, Any]] = Field(default_factory=list)
+    custom_rules_file: Optional[str] = None
+    severity_overrides: Dict[str, str] = Field(default_factory=dict)
 
 
 class LLMSettings(BaseModel):
@@ -93,6 +96,12 @@ class RunSettings(BaseModel):
     suite_order: List[str] = Field(
         default_factory=lambda: ["unit", "behave", "e2e"],
         description="Order in which test suites are executed",
+    )
+    parallel: bool = Field(default=False, description="Run suites concurrently")
+    max_workers: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Max concurrent suites (defaults to number of enabled suites)",
     )
 
 
@@ -127,6 +136,14 @@ class QAAgentProfile(BaseModel):
         if not self.openapi.spec_path:
             return None
         candidate = Path(self.openapi.spec_path)
+        if not candidate.is_absolute():
+            candidate = project_root / candidate
+        return candidate
+
+    def resolve_custom_rules_path(self, project_root: Path) -> Optional[Path]:
+        if not self.risk_assessment.custom_rules_file:
+            return None
+        candidate = Path(self.risk_assessment.custom_rules_file)
         if not candidate.is_absolute():
             candidate = project_root / candidate
         return candidate

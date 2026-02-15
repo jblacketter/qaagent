@@ -36,6 +36,21 @@ class TestDetectProjectType:
 
         assert detect_project_type(tmp_path) == "fastapi"
 
+    def test_go_from_go_mod(self, tmp_path: Path):
+        (tmp_path / "go.mod").write_text("module x\nrequire github.com/gin-gonic/gin v1.9.0\n")
+
+        assert detect_project_type(tmp_path) == "go"
+
+    def test_ruby_from_gemfile(self, tmp_path: Path):
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\ngem "sinatra"\n')
+
+        assert detect_project_type(tmp_path) == "ruby"
+
+    def test_rust_from_cargo(self, tmp_path: Path):
+        (tmp_path / "Cargo.toml").write_text("[dependencies]\naxum = \"0.7\"\n")
+
+        assert detect_project_type(tmp_path) == "rust"
+
     def test_generic_fallback(self, tmp_path: Path):
         assert detect_project_type(tmp_path) == "generic"
 

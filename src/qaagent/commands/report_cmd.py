@@ -15,6 +15,12 @@ from ._helpers import console
 from qaagent.config import load_active_profile, load_config_compat
 from qaagent.evidence.models import ToolStatus
 from qaagent.openapi_utils import find_openapi_candidates
+from qaagent.notifications import (
+    build_ci_summary,
+    render_ci_summary,
+    send_email_smtp,
+    send_slack_webhook,
+)
 from qaagent.report import generate_report
 from qaagent.llm import summarize_findings_text, llm_available
 from qaagent.tools import ensure_dir
@@ -95,6 +101,72 @@ def summarize(
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     Path(out).write_text(summary, encoding="utf-8")
     print(f"[green]Summary written:[/green] {out} (LLM={'yes' if llm_available() else 'no'})")
+
+
+def notify(
+    findings: str = typer.Option("reports/findings.md", help="Findings output path (regenerated)"),
+    fmt: str = typer.Option("markdown", help="Findings format: markdown|html"),
+    output_format: str = typer.Option("text", help="Summary format: text|json"),
+    slack_webhook: Optional[str] = typer.Option(
+        None,
+        "--slack-webhook",
+        envvar="QAAGENT_SLACK_WEBHOOK",
+        help="Slack incoming webhook URL",
+    ),
+    email_to: Optional[List[str]] = typer.Option(None, "--email-to", help="Email recipient (repeatable)"),
+    smtp_host: Optional[str] = typer.Option(None, "--smtp-host", envvar="QAAGENT_SMTP_HOST", help="SMTP host"),
+    smtp_port: int = typer.Option(587, "--smtp-port", envvar="QAAGENT_SMTP_PORT", help="SMTP port"),
+    smtp_user: Optional[str] = typer.Option(None, "--smtp-user", envvar="QAAGENT_SMTP_USER", help="SMTP username"),
+    smtp_password_env: str = typer.Option(
+        "QAAGENT_SMTP_PASSWORD",
+        "--smtp-password-env",
+        help="Environment variable containing SMTP password",
+    ),
+    email_from: Optional[str] = typer.Option(None, "--email-from", envvar="QAAGENT_EMAIL_FROM", help="Sender email"),
+    subject: str = typer.Option("QAAgent CI Summary", "--subject", help="Notification subject/title"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print summary without sending notifications"),
+):
+    """Generate a CI summary and optionally send Slack/email notifications."""
+    meta = generate_report(output=findings, fmt=fmt)
+    summary = build_ci_summary(meta)
+    text = render_ci_summary(summary)
+
+    if output_format.lower() == "json":
+        print(json.dumps(summary, indent=2))
+    else:
+        print(text)
+
+    if dry_run:
+        print("[yellow]Dry run enabled; no notifications sent.[/yellow]")
+        return
+
+    sent = 0
+    if slack_webhook:
+        send_slack_webhook(slack_webhook, text, title=subject)
+        print("[green]Sent Slack notification[/green]")
+        sent += 1
+
+    recipients = list(email_to or [])
+    if recipients:
+        smtp_password = os.environ.get(smtp_password_env)
+        if not smtp_host or not smtp_user or not smtp_password or not email_from:
+            print("[red]Email notification requires --smtp-host, --smtp-user, --email-from, and SMTP password env.[/red]")
+            raise typer.Exit(code=2)
+        send_email_smtp(
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            sender=email_from,
+            recipients=recipients,
+            subject=subject,
+            body=text,
+        )
+        print(f"[green]Sent email notification to {len(recipients)} recipient(s)[/green]")
+        sent += 1
+
+    if sent == 0:
+        print("[yellow]No notification targets configured. Set --slack-webhook and/or --email-to.[/yellow]")
 
 
 def open_report(path: str = typer.Option("reports/findings.html", help="Path to report HTML")):
@@ -286,6 +358,7 @@ def register(app: typer.Typer) -> None:
     app.command("report")(report)
     app.command("dashboard")(dashboard)
     app.command("summarize")(summarize)
+    app.command("notify")(notify)
     app.command("open-report")(open_report)
     app.command("export-reports")(export_reports)
     app.command("plan-run")(plan_run)

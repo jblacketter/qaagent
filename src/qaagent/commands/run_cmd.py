@@ -495,6 +495,17 @@ def a11y_from_sitemap(
 
 def run_all(
     out: Optional[str] = typer.Option(None, help="Output directory for results"),
+    parallel: bool = typer.Option(
+        False,
+        "--parallel",
+        help="Run enabled test suites in parallel",
+    ),
+    max_workers: Optional[int] = typer.Option(
+        None,
+        "--max-workers",
+        min=1,
+        help="Max concurrent suites when running in parallel",
+    ),
 ):
     """Run all enabled test suites via the orchestrator."""
     from qaagent.config import load_active_profile
@@ -506,10 +517,26 @@ def run_all(
         console.print("[red]No active profile. Use `qaagent use <target>` first.[/red]")
         raise typer.Exit(code=2)
 
-    output_dir = Path(out) if out else Path("reports")
-    orchestrator = RunOrchestrator(config=profile, output_dir=output_dir)
+    run_parallel = parallel or profile.run.parallel
+    run_max_workers = max_workers if max_workers is not None else profile.run.max_workers
 
-    console.print("[cyan]Running all enabled test suites...[/cyan]")
+    output_dir = Path(out) if out else Path("reports")
+    orchestrator = RunOrchestrator(
+        config=profile,
+        output_dir=output_dir,
+        parallel=run_parallel,
+        max_workers=run_max_workers,
+    )
+
+    if run_parallel:
+        if run_max_workers is not None:
+            console.print(
+                f"[cyan]Running all enabled test suites in parallel (max workers: {run_max_workers})...[/cyan]",
+            )
+        else:
+            console.print("[cyan]Running all enabled test suites in parallel...[/cyan]")
+    else:
+        console.print("[cyan]Running all enabled test suites sequentially...[/cyan]")
     result = orchestrator.run_all()
 
     # Print summary
