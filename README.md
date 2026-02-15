@@ -426,6 +426,7 @@ qaagent report --fmt html --out reports/findings.html
 
 ## Additional Guides
 
+- **[UI Getting Started](docs/UI_GETTING_STARTED.md)** - Visual guide to using QA Agent from the web interface (start here if you prefer GUIs)
 - [Workspace Guide](docs/WORKSPACE_GUIDE.md) - Managing generated artifacts with review-and-approve workflow
 - [MCP and Agents Guide](docs/MCP_AND_AGENTS_GUIDE.md) - AI agent integration and Claude Desktop setup
 - [Windows Setup](docs/WINDOWS_SETUP.md) - Platform-specific installation for Windows
