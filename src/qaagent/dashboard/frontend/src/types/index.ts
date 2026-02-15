@@ -129,3 +129,85 @@ export interface ApplyFixResponse {
   message: string;
   errors: string[];
 }
+
+// App Documentation types
+export interface RouteDoc {
+  path: string;
+  method: string;
+  summary: string | null;
+  description: string | null;
+  auth_required: boolean;
+  params: Record<string, unknown>;
+  responses: Record<string, unknown>;
+  tags: string[];
+}
+
+export interface FeatureArea {
+  id: string;
+  name: string;
+  description: string;
+  routes: RouteDoc[];
+  crud_operations: string[];
+  auth_required: boolean;
+  integration_ids: string[];
+  tags: string[];
+}
+
+export interface Integration {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  package: string | null;
+  env_vars: string[];
+  connected_features: string[];
+  source: string;
+}
+
+export interface CujStep {
+  order: number;
+  action: string;
+  route: string | null;
+  method: string | null;
+}
+
+export interface DiscoveredCUJ {
+  id: string;
+  name: string;
+  description: string;
+  pattern: string;
+  steps: CujStep[];
+  feature_ids: string[];
+  confidence: number;
+}
+
+export interface ArchitectureNode {
+  id: string;
+  label: string;
+  type: string;
+  metadata: Record<string, unknown>;
+  position: { x: number; y: number } | null;
+}
+
+export interface ArchitectureEdge {
+  id: string;
+  source: string;
+  target: string;
+  label: string | null;
+  type: string;
+}
+
+export interface AppDocumentation {
+  app_name: string;
+  summary: string;
+  generated_at: string;
+  content_hash: string;
+  source_dir: string | null;
+  features: FeatureArea[];
+  integrations: Integration[];
+  discovered_cujs: DiscoveredCUJ[];
+  architecture_nodes: ArchitectureNode[];
+  architecture_edges: ArchitectureEdge[];
+  total_routes: number;
+  metadata: Record<string, unknown>;
+}

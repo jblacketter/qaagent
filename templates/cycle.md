@@ -4,8 +4,8 @@
 - **Phase:** [phase name]
 - **Type:** [plan|impl]
 - **Started:** [YYYY-MM-DD]
-- **Lead:** {{lead}}
-- **Reviewer:** {{reviewer}}
+- **Lead:** claude
+- **Reviewer:** codex
 
 ## Reference
 - Plan: `docs/phases/[phase].md`

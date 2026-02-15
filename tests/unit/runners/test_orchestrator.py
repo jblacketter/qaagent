@@ -1,5 +1,7 @@
 """Tests for RunOrchestrator."""
+from concurrent.futures import Future
 from pathlib import Path
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -343,3 +345,183 @@ class TestRunOrchestrator:
         assert len(records) == 2
         assert records[0]["name"] == "test_pass"
         assert records[1]["status"] == "failed"
+
+    @patch("qaagent.runners.orchestrator.RunManager")
+    def test_parallel_execution_preserves_suite_order(self, MockRunManager, tmp_path):
+        """Parallel execution still reports suites in configured order."""
+        mock_handle = MagicMock()
+        mock_handle.artifacts_dir = tmp_path / "artifacts"
+        mock_handle.artifacts_dir.mkdir()
+        MockRunManager.return_value.create_run.return_value = mock_handle
+
+        def make_runner_cls(name, delay):
+            cls = MagicMock()
+            inst = MagicMock()
+
+            def run_fn(test_path):
+                time.sleep(delay)
+                return _success_result(name)
+
+            inst.run.side_effect = run_fn
+            cls.return_value = inst
+            return cls
+
+        profile = _make_profile(
+            tests=TestsSettings(
+                unit=SuiteSettings(enabled=True, output_dir=str(tmp_path / "unit")),
+                behave=SuiteSettings(enabled=True, output_dir=str(tmp_path / "behave")),
+                e2e=PlaywrightSuiteSettings(enabled=True, output_dir=str(tmp_path / "e2e")),
+            ),
+            run=RunSettings(
+                suite_order=["unit", "behave", "e2e"],
+                parallel=True,
+            ),
+        )
+        (tmp_path / "unit").mkdir()
+        (tmp_path / "behave").mkdir()
+        (tmp_path / "e2e").mkdir()
+
+        runner_map = {
+            "unit": make_runner_cls("unit", 0.05),
+            "behave": make_runner_cls("behave", 0.01),
+            "e2e": make_runner_cls("e2e", 0.02),
+        }
+
+        orch = RunOrchestrator(config=profile, output_dir=tmp_path)
+        with patch.dict("qaagent.runners.orchestrator._RUNNER_MAP", runner_map):
+            result = orch.run_all()
+
+        assert list(result.suites.keys()) == ["unit", "behave", "e2e"]
+        assert result.success
+
+    @patch("qaagent.runners.orchestrator.RunManager")
+    def test_parallel_exception_captured(self, MockRunManager, tmp_path):
+        """An exception in one suite is converted to an error TestResult."""
+        mock_handle = MagicMock()
+        mock_handle.artifacts_dir = tmp_path / "artifacts"
+        mock_handle.artifacts_dir.mkdir()
+        MockRunManager.return_value.create_run.return_value = mock_handle
+
+        profile = _make_profile(
+            tests=TestsSettings(
+                unit=SuiteSettings(enabled=True, output_dir=str(tmp_path / "unit")),
+                behave=SuiteSettings(enabled=True, output_dir=str(tmp_path / "behave")),
+                e2e=PlaywrightSuiteSettings(enabled=False, output_dir=str(tmp_path / "e2e")),
+            ),
+            run=RunSettings(
+                suite_order=["unit", "behave"],
+                parallel=True,
+            ),
+        )
+        (tmp_path / "unit").mkdir()
+        (tmp_path / "behave").mkdir()
+
+        orch = RunOrchestrator(config=profile, output_dir=tmp_path)
+
+        def fake_single(suite_name, generated, base_url):
+            if suite_name == "unit":
+                raise RuntimeError("boom")
+            return suite_name, _success_result(suite_name, runner="behave")
+
+        with patch.object(orch, "_run_single_suite", side_effect=fake_single):
+            result = orch.run_all()
+
+        assert result.suites["unit"].errors == 1
+        assert result.suites["unit"].runner == "orchestrator"
+        assert result.suites["behave"].success
+        assert result.total_errors == 1
+
+    @patch("qaagent.runners.orchestrator.RunManager")
+    def test_parallel_respects_max_workers(self, MockRunManager, tmp_path):
+        """Configured max_workers is passed to ThreadPoolExecutor."""
+        mock_handle = MagicMock()
+        mock_handle.artifacts_dir = tmp_path / "artifacts"
+        mock_handle.artifacts_dir.mkdir()
+        MockRunManager.return_value.create_run.return_value = mock_handle
+
+        profile = _make_profile(
+            tests=TestsSettings(
+                unit=SuiteSettings(enabled=True, output_dir=str(tmp_path / "unit")),
+                behave=SuiteSettings(enabled=True, output_dir=str(tmp_path / "behave")),
+                e2e=PlaywrightSuiteSettings(enabled=False, output_dir=str(tmp_path / "e2e")),
+            ),
+            run=RunSettings(
+                suite_order=["unit", "behave"],
+                parallel=True,
+                max_workers=2,
+            ),
+        )
+        (tmp_path / "unit").mkdir()
+        (tmp_path / "behave").mkdir()
+
+        mock_runner_cls = MagicMock()
+        mock_runner_inst = MagicMock()
+        mock_runner_inst.run.return_value = _success_result("unit")
+        mock_runner_cls.return_value = mock_runner_inst
+
+        class _ImmediateExecutor:
+            def __init__(self, max_workers):
+                self.max_workers = max_workers
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def submit(self, fn, *args, **kwargs):
+                fut = Future()
+                try:
+                    fut.set_result(fn(*args, **kwargs))
+                except Exception as err:  # noqa: BLE001
+                    fut.set_exception(err)
+                return fut
+
+        orch = RunOrchestrator(config=profile, output_dir=tmp_path)
+        with patch.dict(
+            "qaagent.runners.orchestrator._RUNNER_MAP",
+            {"unit": mock_runner_cls, "behave": mock_runner_cls},
+        ), patch(
+            "qaagent.runners.orchestrator.ThreadPoolExecutor",
+            side_effect=lambda max_workers: _ImmediateExecutor(max_workers),
+        ) as mock_pool:
+            result = orch.run_all()
+
+        mock_pool.assert_called_once_with(max_workers=2)
+        assert len(result.suites) == 2
+
+    @patch("qaagent.runners.orchestrator.RunManager")
+    def test_parallel_retry_on_failure(self, MockRunManager, tmp_path):
+        """Retry logic still applies when parallel mode is enabled."""
+        mock_handle = MagicMock()
+        mock_handle.artifacts_dir = tmp_path / "artifacts"
+        mock_handle.artifacts_dir.mkdir()
+        MockRunManager.return_value.create_run.return_value = mock_handle
+
+        fail_result = _failure_result("unit")
+        success_result = _success_result("unit")
+        mock_runner_cls = MagicMock()
+        mock_runner_inst = MagicMock()
+        mock_runner_inst.run.side_effect = [fail_result, success_result]
+        mock_runner_cls.return_value = mock_runner_inst
+
+        profile = _make_profile(
+            tests=TestsSettings(
+                unit=SuiteSettings(enabled=True, output_dir=str(tmp_path / "unit")),
+                behave=SuiteSettings(enabled=False, output_dir=str(tmp_path / "behave")),
+                e2e=PlaywrightSuiteSettings(enabled=False, output_dir=str(tmp_path / "e2e")),
+            ),
+            run=RunSettings(
+                retry_count=1,
+                suite_order=["unit"],
+                parallel=True,
+            ),
+        )
+        (tmp_path / "unit").mkdir()
+
+        orch = RunOrchestrator(config=profile, output_dir=tmp_path)
+        with patch.dict("qaagent.runners.orchestrator._RUNNER_MAP", {"unit": mock_runner_cls}):
+            result = orch.run_all()
+
+        assert mock_runner_inst.run.call_count == 2
+        assert result.suites["unit"].success

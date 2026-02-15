@@ -99,9 +99,19 @@ class TestRunSettings:
         assert rs.retry_count == 0
         assert rs.timeout == 300
         assert rs.suite_order == ["unit", "behave", "e2e"]
+        assert rs.parallel is False
+        assert rs.max_workers is None
 
     def test_custom(self):
-        rs = RunSettings(retry_count=3, timeout=600, suite_order=["e2e", "unit"])
+        rs = RunSettings(
+            retry_count=3,
+            timeout=600,
+            suite_order=["e2e", "unit"],
+            parallel=True,
+            max_workers=2,
+        )
         assert rs.retry_count == 3
         assert rs.timeout == 600
         assert rs.suite_order == ["e2e", "unit"]
+        assert rs.parallel is True
+        assert rs.max_workers == 2

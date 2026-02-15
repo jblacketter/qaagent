@@ -78,6 +78,19 @@ class TestEnhanceAssertions:
         assert len(assertions) >= 1
         assert any("status_code" in a for a in assertions)
 
+    @patch("qaagent.generators.llm_enhancer.LLMClient")
+    def test_includes_retrieval_context_in_prompt(self, mock_cls) -> None:
+        mock_client = MagicMock()
+        mock_client.chat.return_value = ChatResponse(content="assert response.status_code == 200")
+        mock_cls.return_value = mock_client
+
+        enhancer = LLMTestEnhancer(_settings())
+        enhancer.enhance_assertions(_route(), retrieval_context=["src/pets.py:1-3\nvalidate name"])
+
+        sent_messages = mock_client.chat.call_args.args[0]
+        assert "Repository context" in sent_messages[1].content
+        assert "src/pets.py" in sent_messages[1].content
+
 
 class TestGenerateEdgeCases:
     @patch("qaagent.generators.llm_enhancer.LLMClient")

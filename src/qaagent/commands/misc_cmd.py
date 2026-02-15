@@ -16,6 +16,7 @@ from qaagent.config import load_active_profile, load_config_compat, write_defaul
 from qaagent.doctor import HealthStatus, checks_to_json, run_health_checks
 from qaagent.llm import generate_api_tests_from_spec, llm_available
 from qaagent.openapi_utils import find_openapi_candidates, load_openapi, enumerate_operations
+from qaagent.rag import default_index_path, load_index, search_index
 from qaagent.tools import ensure_dir, which
 from qaagent import __version__
 
@@ -237,6 +238,9 @@ def gen_tests(
     base_url: Optional[str] = typer.Option(None, help="Base URL for generated tests"),
     outdir: str = typer.Option("tests/api", help="Directory to write tests"),
     max_tests: int = typer.Option(12, help="Max tests to generate"),
+    use_rag: bool = typer.Option(False, "--use-rag", help="Enable retrieval context from local RAG index"),
+    rag_top_k: int = typer.Option(5, "--rag-top-k", min=1, max=20, help="Number of retrieval snippets to include"),
+    rag_index: Optional[str] = typer.Option(None, "--rag-index", help="Path to RAG index.json"),
     dry_run: bool = typer.Option(False, help="Print output instead of writing files"),
 ):
     """Generate test stubs. For now, supports API-only from OpenAPI. Falls back if no LLM."""
@@ -259,7 +263,38 @@ def gen_tests(
         base_url = os.environ.get("BASE_URL", "http://localhost:8000")
 
     spec = load_openapi(openapi)
-    code = generate_api_tests_from_spec(spec, base_url=base_url, max_tests=max_tests)
+    retrieval_context: Optional[List[str]] = None
+    if use_rag:
+        rag_root = Path.cwd()
+        try:
+            entry, _ = load_active_profile()
+            rag_root = entry.resolved_path()
+        except Exception:
+            pass
+
+        index_path = Path(rag_index).expanduser().resolve() if rag_index else default_index_path(rag_root)
+        if not index_path.exists():
+            print(f"[red]RAG index not found:[/red] {index_path}")
+            print("[yellow]Run `qaagent rag index` first or provide --rag-index[/yellow]")
+            raise typer.Exit(code=2)
+
+        index_data = load_index(index_path)
+        ops = enumerate_operations(spec)[:max_tests]
+        op_lines = [f"{op.method} {op.path}" for op in ops]
+        query = "API test generation context:\n" + "\n".join(op_lines)
+        results = search_index(index_data, query, top_k=rag_top_k)
+        retrieval_context = [
+            f"{item.path}:{item.start_line}-{item.end_line}\n{item.text}"
+            for item in results
+        ]
+        print(f"[cyan]Using {len(retrieval_context)} RAG snippet(s) from {index_path}[/cyan]")
+
+    code = generate_api_tests_from_spec(
+        spec,
+        base_url=base_url,
+        max_tests=max_tests,
+        retrieval_context=retrieval_context,
+    )
     if dry_run:
         console.rule("Generated tests (preview)")
         print(code)

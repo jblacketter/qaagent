@@ -1,8 +1,8 @@
 # Handoff: [Phase Name] - Implementation Review
 
 **Date:** [YYYY-MM-DD]
-**From:** {{lead}} (Lead)
-**To:** {{reviewer}} (Reviewer)
+**From:** claude (Lead)
+**To:** codex (Reviewer)
 **Type:** Implementation Review
 
 ## Summary

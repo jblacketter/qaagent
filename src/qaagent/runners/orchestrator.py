@@ -5,11 +5,12 @@ collects artifacts, and writes evidence.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from qaagent.config.models import LLMSettings, QAAgentProfile, RunSettings
 from qaagent.evidence.id_generator import EvidenceIDGenerator
@@ -66,10 +67,16 @@ class RunOrchestrator:
         config: QAAgentProfile,
         output_dir: Optional[Path] = None,
         run_handle: Optional[RunHandle] = None,
+        parallel: Optional[bool] = None,
+        max_workers: Optional[int] = None,
     ) -> None:
         self.config = config
         self.output_dir = output_dir or Path("reports")
-        self.run_settings = config.run
+        self.run_settings = config.run.model_copy(deep=True)
+        if parallel is not None:
+            self.run_settings.parallel = parallel
+        if max_workers is not None:
+            self.run_settings.max_workers = max_workers
         self._external_handle = run_handle
 
     def run_all(
@@ -91,33 +98,18 @@ class RunOrchestrator:
         result = OrchestratorResult(run_handle=handle)
 
         base_url = self._resolve_base_url()
+        if self.run_settings.parallel:
+            suite_results = self._run_suites_parallel(generated, base_url)
+        else:
+            suite_results = self._run_suites_sequential(generated, base_url)
 
-        for suite_name in self.run_settings.suite_order:
-            if not self._suite_enabled(suite_name):
-                logger.info("Suite '%s' is disabled, skipping", suite_name)
-                continue
-
-            test_path = self._resolve_test_path(suite_name, generated)
-            if test_path is None or not test_path.exists():
-                logger.info("Suite '%s': test path not found, skipping", suite_name)
-                continue
-
-            logger.info("Running suite '%s' from %s", suite_name, test_path)
-            suite_result = self.run_suite(suite_name, test_path, base_url)
-
-            # Retry failed tests if configured
-            if not suite_result.success and self.run_settings.retry_count > 0:
-                suite_result = self._retry_failed(
-                    suite_name, test_path, base_url, suite_result,
-                )
-
+        # Evidence writes happen here, after execution completes.
+        for suite_name, suite_result in suite_results:
             result.suites[suite_name] = suite_result
             result.total_passed += suite_result.passed
             result.total_failed += suite_result.failed
             result.total_errors += suite_result.errors
             result.total_duration += suite_result.duration
-
-            # Collect artifacts and write test records into evidence
             self._collect_artifacts(handle, suite_name, suite_result)
             self._write_test_records(handle, suite_name, suite_result)
 
@@ -136,6 +128,103 @@ class RunOrchestrator:
                 handle.finalize()
 
         return result
+
+    def _run_single_suite(
+        self,
+        suite_name: str,
+        generated: Optional[Dict[str, GenerationResult]],
+        base_url: Optional[str],
+    ) -> Optional[Tuple[str, TestResult]]:
+        """Execute one suite with skip and retry handling."""
+        if not self._suite_enabled(suite_name):
+            logger.info("Suite '%s' is disabled, skipping", suite_name)
+            return None
+
+        test_path = self._resolve_test_path(suite_name, generated)
+        if test_path is None or not test_path.exists():
+            logger.info("Suite '%s': test path not found, skipping", suite_name)
+            return None
+
+        logger.info("Running suite '%s' from %s", suite_name, test_path)
+        suite_result = self.run_suite(suite_name, test_path, base_url)
+
+        if not suite_result.success and self.run_settings.retry_count > 0:
+            suite_result = self._retry_failed(
+                suite_name, test_path, base_url, suite_result,
+            )
+        return suite_name, suite_result
+
+    def _run_suites_sequential(
+        self,
+        generated: Optional[Dict[str, GenerationResult]],
+        base_url: Optional[str],
+    ) -> List[Tuple[str, TestResult]]:
+        """Run enabled suites sequentially in suite_order."""
+        ordered_results: List[Tuple[str, TestResult]] = []
+        for suite_name in self.run_settings.suite_order:
+            suite_outcome = self._run_single_suite(suite_name, generated, base_url)
+            if suite_outcome is not None:
+                ordered_results.append(suite_outcome)
+        return ordered_results
+
+    def _run_suites_parallel(
+        self,
+        generated: Optional[Dict[str, GenerationResult]],
+        base_url: Optional[str],
+    ) -> List[Tuple[str, TestResult]]:
+        """Run enabled suites concurrently and return suite_order output."""
+        enabled_suites = [
+            suite_name
+            for suite_name in self.run_settings.suite_order
+            if self._suite_enabled(suite_name)
+        ]
+        if not enabled_suites:
+            return []
+
+        default_workers = len(enabled_suites)
+        max_workers = self.run_settings.max_workers or default_workers
+        max_workers = max(1, max_workers)
+
+        results_by_suite: Dict[str, TestResult] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_suite = {
+                executor.submit(
+                    self._run_single_suite,
+                    suite_name,
+                    generated,
+                    base_url,
+                ): suite_name
+                for suite_name in enabled_suites
+            }
+            for future in as_completed(future_to_suite):
+                suite_name = future_to_suite[future]
+                try:
+                    suite_outcome = future.result()
+                except Exception:
+                    logger.exception(
+                        "Suite '%s' crashed during parallel execution",
+                        suite_name,
+                    )
+                    suite_outcome = (
+                        suite_name,
+                        TestResult(
+                            suite_name=suite_name,
+                            runner="orchestrator",
+                            errors=1,
+                            returncode=1,
+                        ),
+                    )
+                if suite_outcome is None:
+                    continue
+                resolved_suite, suite_result = suite_outcome
+                results_by_suite[resolved_suite] = suite_result
+
+        ordered_results: List[Tuple[str, TestResult]] = []
+        for suite_name in self.run_settings.suite_order:
+            suite_result = results_by_suite.get(suite_name)
+            if suite_result is not None:
+                ordered_results.append((suite_name, suite_result))
+        return ordered_results
 
     def run_suite(
         self,

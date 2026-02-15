@@ -2,8 +2,8 @@
 
 ## Current State
 - **Phase:** [name] - [status]
-- **Lead:** {{lead}}
-- **Reviewer:** {{reviewer}}
+- **Lead:** claude
+- **Reviewer:** codex
 
 ## Active Context
 [Summary of what is being worked on]

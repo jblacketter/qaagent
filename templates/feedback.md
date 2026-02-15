@@ -1,6 +1,6 @@
 # Feedback: [Phase Name] - [Plan/Implementation] Review
 
-**Reviewer:** {{reviewer}}
+**Reviewer:** codex
 **Date:** [YYYY-MM-DD]
 **Handoff:** `docs/handoffs/[handoff_file].md`
 

@@ -9,8 +9,8 @@
 - [ ] Complete
 
 ## Roles
-- Lead: {{lead}}
-- Reviewer: {{reviewer}}
+- Lead: claude
+- Reviewer: codex
 - Arbiter: Human
 
 ## Summary

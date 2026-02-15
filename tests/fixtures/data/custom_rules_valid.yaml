@@ -1,0 +1,33 @@
+rules:
+  - rule_id: "CUSTOM-001"
+    category: security
+    severity: high
+    title: "GraphQL introspection enabled"
+    description: "GraphQL introspection should be disabled in production"
+    recommendation: "Disable introspection in production config"
+    match:
+      path: { contains: "/graphql" }
+      method: { in: ["POST", "GET"] }
+    cwe_id: "CWE-200"
+
+  - rule_id: "CUSTOM-002"
+    category: performance
+    severity: medium
+    title: "Unbounded export endpoint"
+    description: "Export endpoints without pagination may cause OOM"
+    recommendation: "Add limit/offset or streaming"
+    match:
+      path: { regex: ".*/export$" }
+      method: { equals: "GET" }
+    severity_escalation:
+      - condition: { path: { contains: "admin" } }
+        severity: critical
+
+  - rule_id: "CUSTOM-003"
+    category: quality
+    severity: low
+    title: "Missing tags on endpoint"
+    description: "All endpoints should be tagged for documentation"
+    recommendation: "Add appropriate tags"
+    match:
+      tags: { empty: true }

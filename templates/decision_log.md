@@ -18,7 +18,7 @@ This log tracks important decisions made during the project.
 
 **Rationale:** [Why this option was chosen]
 
-**Decided By:** [{{lead}} / {{reviewer}} / Human / Consensus]
+**Decided By:** [claude / codex / Human / Consensus]
 
 **Phase:** [Which phase this relates to]
 

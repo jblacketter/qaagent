@@ -6,6 +6,9 @@ Detects project type and validates structure:
 - FastAPI
 - Flask
 - Django
+- Go (net/http, Gin, Echo)
+- Ruby (Rails, Sinatra)
+- Rust (Actix Web, Axum)
 - Express
 """
 
@@ -32,7 +35,7 @@ class RepoValidator:
         Detect the project type from repository structure.
 
         Returns:
-            Project type: "nextjs", "fastapi", "flask", "django", "express", or None
+            Project type: "nextjs", "fastapi", "flask", "django", "go", "ruby", "rust", "express", or None
         """
         if self._is_nextjs():
             return "nextjs"
@@ -42,6 +45,12 @@ class RepoValidator:
             return "flask"
         if self._is_django():
             return "django"
+        if self._is_go():
+            return "go"
+        if self._is_ruby():
+            return "ruby"
+        if self._is_rust():
+            return "rust"
         if self._is_express():
             return "express"
         return None
@@ -67,6 +76,21 @@ class RepoValidator:
             api_routes_found = self._has_fastapi_routes()
             if not api_routes_found:
                 issues.append("No FastAPI routes found (no main.py or app.py with FastAPI())")
+
+        elif project_type == "go":
+            api_routes_found = self._has_go_routes()
+            if not api_routes_found:
+                issues.append("No Go HTTP routes found (net/http, Gin, or Echo patterns)")
+
+        elif project_type == "ruby":
+            api_routes_found = self._has_ruby_routes()
+            if not api_routes_found:
+                issues.append("No Ruby routes found (Rails routes.rb or Sinatra handlers)")
+
+        elif project_type == "rust":
+            api_routes_found = self._has_rust_routes()
+            if not api_routes_found:
+                issues.append("No Rust routes found (Actix or Axum route patterns)")
 
         elif project_type is None:
             issues.append("Unknown project type - no framework detected")
@@ -193,6 +217,57 @@ class RepoValidator:
 
         return False
 
+    def _is_go(self) -> bool:
+        """Check if repository is a Go web service project."""
+        go_mod = self.repo_path / "go.mod"
+        if go_mod.exists():
+            try:
+                mod = go_mod.read_text(encoding="utf-8").lower()
+                if any(dep in mod for dep in ("gin-gonic/gin", "labstack/echo", "gorilla/mux", "go-chi/chi")):
+                    return True
+            except Exception:
+                pass
+        return self._has_go_routes()
+
+    def _is_ruby(self) -> bool:
+        """Check if repository is a Ruby web project."""
+        if (self.repo_path / "config" / "routes.rb").exists():
+            return True
+
+        gemfile = self.repo_path / "Gemfile"
+        if gemfile.exists():
+            try:
+                gems = gemfile.read_text(encoding="utf-8").lower()
+                if "rails" in gems or "sinatra" in gems:
+                    return True
+            except Exception:
+                pass
+
+        for rb_file in self.repo_path.rglob("*.rb"):
+            rel = str(rb_file.relative_to(self.repo_path))
+            if any(skip in rel for skip in ("vendor/", "spec/", "test/", ".bundle/")):
+                continue
+            try:
+                content = rb_file.read_text(encoding="utf-8").lower()
+            except Exception:
+                continue
+            if "sinatra::base" in content or "require 'sinatra'" in content or 'require "sinatra"' in content:
+                return True
+
+        return False
+
+    def _is_rust(self) -> bool:
+        """Check if repository is a Rust web project."""
+        cargo = self.repo_path / "Cargo.toml"
+        if cargo.exists():
+            try:
+                cargo_text = cargo.read_text(encoding="utf-8").lower()
+                if "actix-web" in cargo_text or "axum" in cargo_text:
+                    return True
+            except Exception:
+                pass
+        return self._has_rust_routes()
+
     def _has_nextjs_routes(self) -> bool:
         """Check if Next.js project has API routes."""
         # Check src/app/api
@@ -224,6 +299,85 @@ class RepoValidator:
 
         return False
 
+    def _has_go_routes(self) -> bool:
+        """Check if Go project has HTTP route definitions."""
+        patterns = (
+            "http.HandleFunc(",
+            "http.Handle(",
+            ".GET(",
+            ".POST(",
+            ".PUT(",
+            ".PATCH(",
+            ".DELETE(",
+            ".Group(",
+            "gin.Default(",
+            "gin.New(",
+            "echo.New(",
+        )
+        for go_file in self.repo_path.rglob("*.go"):
+            rel = str(go_file.relative_to(self.repo_path))
+            if any(skip in rel for skip in ("vendor/", "testdata/", "__pycache__/")):
+                continue
+            if go_file.name.endswith("_test.go"):
+                continue
+            try:
+                content = go_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            if any(pattern in content for pattern in patterns):
+                return True
+        return False
+
+    def _has_ruby_routes(self) -> bool:
+        """Check if Ruby project has Rails/Sinatra route definitions."""
+        routes_rb = self.repo_path / "config" / "routes.rb"
+        if routes_rb.exists():
+            try:
+                content = routes_rb.read_text(encoding="utf-8")
+            except Exception:
+                content = ""
+            if any(token in content for token in ("routes.draw", "resources :", "resource :", "get ", "post ", "match ")):
+                return True
+
+        route_re = ("get ", "post ", "put ", "patch ", "delete ", "head ", "options ")
+        for rb_file in self.repo_path.rglob("*.rb"):
+            rel = str(rb_file.relative_to(self.repo_path))
+            if any(skip in rel for skip in ("vendor/", "spec/", "test/", ".bundle/")):
+                continue
+            try:
+                content = rb_file.read_text(encoding="utf-8").lower()
+            except Exception:
+                continue
+            if any(method in content for method in route_re):
+                return True
+        return False
+
+    def _has_rust_routes(self) -> bool:
+        """Check if Rust project has Actix/Axum route definitions."""
+        patterns = (
+            "#[get(",
+            "#[post(",
+            "#[put(",
+            "#[patch(",
+            "#[delete(",
+            ".route(",
+            "web::get()",
+            "web::post()",
+            "router::new()",
+            "axum::routing::",
+        )
+        for rs_file in self.repo_path.rglob("*.rs"):
+            rel = str(rs_file.relative_to(self.repo_path))
+            if any(skip in rel for skip in ("target/", "tests/", "benches/")):
+                continue
+            try:
+                content = rs_file.read_text(encoding="utf-8").lower()
+            except Exception:
+                continue
+            if any(pattern.lower() in content for pattern in patterns):
+                return True
+        return False
+
     def get_framework_parser(self):
         """Return a FrameworkParser instance for the detected project type, or None."""
         from qaagent.discovery import get_framework_parser
@@ -253,8 +407,8 @@ class RepoValidator:
             if app_api.exists():
                 return app_api
 
-        elif project_type in ("fastapi", "flask", "django"):
-            # Return repository root for Python projects
+        elif project_type in ("fastapi", "flask", "django", "go", "ruby", "rust"):
+            # Return repository root for server projects discovered from source.
             return self.repo_path
 
         return None

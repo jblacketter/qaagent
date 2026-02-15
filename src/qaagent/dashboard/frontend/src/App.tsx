@@ -12,6 +12,10 @@ import { SettingsPage } from "./pages/Settings";
 import { RisksPage } from "./pages/Risks";
 import { TrendsPage } from "./pages/Trends";
 import { CujCoveragePage } from "./pages/CujCoverage";
+import { AppDocPage } from "./pages/AppDoc";
+import { FeatureDetailPage } from "./pages/FeatureDetail";
+import { IntegrationsPage } from "./pages/Integrations";
+import { ArchitecturePage } from "./pages/Architecture";
 
 function App() {
   const location = useLocation();
@@ -34,6 +38,10 @@ function App() {
             <Route path="/cuj" element={<CujCoveragePage />} />
             <Route path="/trends" element={<TrendsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/doc" element={<AppDocPage />} />
+            <Route path="/doc/features/:featureId" element={<FeatureDetailPage />} />
+            <Route path="/doc/integrations" element={<IntegrationsPage />} />
+            <Route path="/doc/architecture" element={<ArchitecturePage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Routes>
         </Layout>

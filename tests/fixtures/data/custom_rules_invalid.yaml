@@ -1,0 +1,18 @@
+rules:
+  - rule_id: "BAD-001"
+    category: "not_a_category"
+    severity: high
+    title: "Bad rule"
+    description: "Invalid category"
+    recommendation: "Fix it"
+    match:
+      path: { contains: "/test" }
+
+  - rule_id: "BAD-002"
+    category: security
+    severity: "super_high"
+    title: "Bad severity"
+    description: "Invalid severity"
+    recommendation: "Fix it"
+    match:
+      path: { regex: "[invalid" }

@@ -11,6 +11,12 @@ import type {
   FixableIssuesSummary,
   ApplyFixRequest,
   ApplyFixResponse,
+  AppDocumentation,
+  FeatureArea,
+  Integration,
+  DiscoveredCUJ,
+  ArchitectureNode,
+  ArchitectureEdge,
 } from "../types";
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -106,6 +112,46 @@ export class QAAgentAPI {
       method: "POST",
       body: JSON.stringify(request),
     });
+  }
+
+  // App Documentation
+  async getAppDoc(): Promise<AppDocumentation> {
+    return this.request(`/api/doc`);
+  }
+
+  async getFeatures(): Promise<FeatureArea[]> {
+    const result = await this.request<{ features: FeatureArea[] }>(`/api/doc/features`);
+    return result.features;
+  }
+
+  async getFeature(featureId: string): Promise<FeatureArea> {
+    return this.request(`/api/doc/features/${featureId}`);
+  }
+
+  async getIntegrations(): Promise<Integration[]> {
+    const result = await this.request<{ integrations: Integration[] }>(`/api/doc/integrations`);
+    return result.integrations;
+  }
+
+  async getDiscoveredCujs(): Promise<DiscoveredCUJ[]> {
+    const result = await this.request<{ cujs: DiscoveredCUJ[] }>(`/api/doc/cujs`);
+    return result.cujs;
+  }
+
+  async getArchitecture(): Promise<{ nodes: ArchitectureNode[]; edges: ArchitectureEdge[] }> {
+    return this.request(`/api/doc/architecture`);
+  }
+
+  async regenerateDoc(noLlm = false): Promise<AppDocumentation> {
+    return this.request(`/api/doc/regenerate`, {
+      method: "POST",
+      body: JSON.stringify({ no_llm: noLlm }),
+    });
+  }
+
+  async exportDocMarkdown(): Promise<string> {
+    const result = await this.request<{ content: string }>(`/api/doc/export/markdown`);
+    return result.content;
   }
 }
 

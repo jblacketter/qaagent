@@ -60,6 +60,7 @@ class BaseGenerator(ABC):
         base_url: str = "http://localhost:8000",
         project_name: str = "Application",
         llm_settings: Optional[LLMSettings] = None,
+        retrieval_context: Optional[List[str]] = None,
     ) -> None:
         self.routes = list(routes)
         self.risks = list(risks) if risks else []
@@ -67,6 +68,7 @@ class BaseGenerator(ABC):
         self.base_url = base_url
         self.project_name = project_name
         self.llm_settings = llm_settings
+        self.retrieval_context = list(retrieval_context) if retrieval_context else []
 
     @property
     def llm_enabled(self) -> bool:

@@ -4,9 +4,16 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from typer.testing import CliRunner
+
+from qaagent.commands import app
+from qaagent.config.models import AuthSettings, EnvironmentSettings, OpenAPISettings, ProjectSettings, QAAgentProfile
 from qaagent.evidence import EvidenceWriter, EvidenceIDGenerator, FindingRecord, CoverageRecord, ChurnRecord
 from qaagent.evidence.run_manager import RunManager
+
+runner = CliRunner()
 
 
 def _run_cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -100,3 +107,91 @@ def test_analyze_risks_cli_runs(project_root: Path, tmp_path: Path) -> None:
     assert result_risks.returncode == 0, result_risks.stderr
     data = json.loads(risks_out.read_text())
     assert isinstance(data, list) and data
+
+
+def test_analyze_routes_cli_passes_crawl_options(tmp_path: Path) -> None:
+    out_file = tmp_path / "routes.json"
+    fake_routes = [
+        {
+            "path": "/",
+            "method": "GET",
+            "auth_required": False,
+            "source": "runtime",
+            "confidence": 0.6,
+        }
+    ]
+    with patch("qaagent.commands.analyze_cmd.discover_routes") as mock_discover:
+        mock_discover.return_value = []
+        with patch("qaagent.commands.analyze_cmd.export_routes") as mock_export:
+            result = runner.invoke(
+                app,
+                [
+                    "analyze",
+                    "routes",
+                    "--crawl",
+                    "--crawl-url",
+                    "https://app.example.com",
+                    "--crawl-depth",
+                    "1",
+                    "--crawl-max-pages",
+                    "25",
+                    "--crawl-allow-external",
+                    "--crawl-auth-header",
+                    "Authorization",
+                    "--crawl-auth-token-env",
+                    "API_TOKEN",
+                    "--out",
+                    str(out_file),
+                ],
+                env={"API_TOKEN": "secret"},
+            )
+
+    assert result.exit_code == 0
+    kwargs = mock_discover.call_args.kwargs
+    assert kwargs["crawl"] is True
+    assert kwargs["crawl_url"] == "https://app.example.com"
+    assert kwargs["crawl_depth"] == 1
+    assert kwargs["crawl_max_pages"] == 25
+    assert kwargs["crawl_same_origin"] is False
+    assert kwargs["crawl_headers"]["Authorization"] == "Bearer secret"
+    mock_export.assert_called_once()
+
+
+def test_analyze_routes_cli_uses_active_profile_for_crawl_url(tmp_path: Path) -> None:
+    out_file = tmp_path / "routes.json"
+
+    entry = MagicMock()
+    entry.resolved_path.return_value = tmp_path
+    profile = QAAgentProfile(
+        project=ProjectSettings(name="demo", type="web"),
+        openapi=OpenAPISettings(),
+        app={
+            "dev": EnvironmentSettings(
+                base_url="https://secure.example.com",
+                headers={"X-Tenant": "acme"},
+                auth=AuthSettings(header_name="Authorization", token_env="API_TOKEN", prefix="Bearer "),
+            )
+        },
+    )
+
+    with patch("qaagent.commands.analyze_cmd.load_active_profile", return_value=(entry, profile)), \
+         patch("qaagent.commands.analyze_cmd.discover_routes") as mock_discover, \
+         patch("qaagent.commands.analyze_cmd.export_routes"):
+        mock_discover.return_value = []
+        result = runner.invoke(
+            app,
+            [
+                "analyze",
+                "routes",
+                "--crawl",
+                "--out",
+                str(out_file),
+            ],
+            env={"API_TOKEN": "secret"},
+        )
+
+    assert result.exit_code == 0
+    kwargs = mock_discover.call_args.kwargs
+    assert kwargs["crawl_url"] == "https://secure.example.com"
+    assert kwargs["crawl_headers"]["X-Tenant"] == "acme"
+    assert kwargs["crawl_headers"]["Authorization"] == "Bearer secret"

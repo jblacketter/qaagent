@@ -36,7 +36,23 @@ class LLMTestEnhancer:
         response = self._client.chat(messages)
         return response.content.strip()
 
-    def enhance_assertions(self, route: Route, response_schema: Optional[Dict[str, Any]] = None) -> List[str]:
+    @staticmethod
+    def _format_retrieval_context(retrieval_context: Optional[List[str]]) -> str:
+        """Format bounded retrieval snippets for prompt injection."""
+        if not retrieval_context:
+            return ""
+        sections = []
+        for idx, snippet in enumerate(retrieval_context[:5], start=1):
+            trimmed = snippet[:1200]
+            sections.append(f"[Snippet {idx}]\n{trimmed}")
+        return "\n\nRepository context:\n" + "\n\n".join(sections)
+
+    def enhance_assertions(
+        self,
+        route: Route,
+        response_schema: Optional[Dict[str, Any]] = None,
+        retrieval_context: Optional[List[str]] = None,
+    ) -> List[str]:
         """Generate schema-aware assertion lines for a route's response.
 
         Returns a list of Python assertion strings (without leading 'assert').
@@ -51,6 +67,7 @@ class LLMTestEnhancer:
             f"Route: {route.method} {route.path}\n"
             f"Expected response schema:\n{schema_desc}\n\n"
             "Generate 3-5 specific assertion lines."
+            f"{self._format_retrieval_context(retrieval_context)}"
         )
         try:
             content = self._chat(system, user)
@@ -64,7 +81,12 @@ class LLMTestEnhancer:
             logger.warning("LLM assertion enhancement failed, using fallback")
             return self._fallback_assertions(route)
 
-    def generate_edge_cases(self, route: Route, risks: List[Risk]) -> List[Dict[str, Any]]:
+    def generate_edge_cases(
+        self,
+        route: Route,
+        risks: List[Risk],
+        retrieval_context: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
         """Generate specific edge case inputs with expected status codes.
 
         Returns a list of dicts with keys: name, params, expected_status, description.
@@ -83,6 +105,7 @@ class LLMTestEnhancer:
             f"Parameters: {json.dumps(route.params)}\n"
             f"Known risks:\n{risk_desc}\n\n"
             "Generate 3-5 edge cases."
+            f"{self._format_retrieval_context(retrieval_context)}"
         )
         try:
             content = self._chat(system, user)
@@ -96,7 +119,12 @@ class LLMTestEnhancer:
             logger.warning("LLM edge case generation failed, using fallback")
         return self._fallback_edge_cases(route)
 
-    def generate_test_body(self, route: Route, test_type: str = "happy_path") -> str:
+    def generate_test_body(
+        self,
+        route: Route,
+        test_type: str = "happy_path",
+        retrieval_context: Optional[List[str]] = None,
+    ) -> str:
         """Generate a complete function body for a test type.
 
         Returns Python code for the body of a test function (no def line).
@@ -112,6 +140,7 @@ class LLMTestEnhancer:
             f"Test type: {test_type}\n"
             f"Auth required: {route.auth_required}\n"
             "Generate the test function body."
+            f"{self._format_retrieval_context(retrieval_context)}"
         )
         try:
             content = self._chat(system, user)
@@ -142,7 +171,12 @@ class LLMTestEnhancer:
             logger.warning("LLM code refinement failed, returning original code")
             return code
 
-    def generate_step_definitions(self, route: Route, risk: Optional[Risk] = None) -> List[str]:
+    def generate_step_definitions(
+        self,
+        route: Route,
+        risk: Optional[Risk] = None,
+        retrieval_context: Optional[List[str]] = None,
+    ) -> List[str]:
         """Generate Behave step definition lines for a scenario.
 
         Returns a list of 'then' step strings.
@@ -161,6 +195,7 @@ class LLMTestEnhancer:
             f"Route: {route.method} {route.path}\n"
             f"{risk_context}"
             "Generate 2-4 specific verification steps."
+            f"{self._format_retrieval_context(retrieval_context)}"
         )
         try:
             content = self._chat(system, user)
@@ -174,7 +209,11 @@ class LLMTestEnhancer:
             logger.warning("LLM step generation failed, using fallback")
             return self._fallback_then_steps(route)
 
-    def generate_response_assertions(self, route: Route) -> List[str]:
+    def generate_response_assertions(
+        self,
+        route: Route,
+        retrieval_context: Optional[List[str]] = None,
+    ) -> List[str]:
         """Generate Behave 'then' steps that assert response body structure.
 
         Returns list of Behave step strings.
@@ -189,6 +228,7 @@ class LLMTestEnhancer:
             f"Route: {route.method} {route.path}\n"
             f"Responses: {json.dumps(route.responses)}\n"
             "Generate 2-3 response body assertion steps."
+            f"{self._format_retrieval_context(retrieval_context)}"
         )
         try:
             content = self._chat(system, user)
