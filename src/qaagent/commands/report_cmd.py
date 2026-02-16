@@ -65,13 +65,13 @@ def dashboard(
                 output_path = Path.cwd() / output_path
 
         console.print(f"[cyan]Generating dashboard for '{target}'...[/cyan]")
-        console.print("[cyan]  \u2192 Discovering routes...[/cyan]")
-        console.print("[cyan]  \u2192 Assessing risks...[/cyan]")
-        console.print("[cyan]  \u2192 Building recommendations...[/cyan]")
+        console.print("[cyan]  -> Discovering routes...[/cyan]")
+        console.print("[cyan]  -> Assessing risks...[/cyan]")
+        console.print("[cyan]  -> Building recommendations...[/cyan]")
 
         dashboard_path = generate_dashboard_from_workspace(target, output_path)
 
-        console.print(f"[green]\u2713 Dashboard generated \u2192 {dashboard_path}[/green]")
+        console.print(f"[green][OK] Dashboard generated -> {dashboard_path}[/green]")
         console.print()
         console.print("[yellow]Open in browser:[/yellow]")
         console.print(f"  open {dashboard_path}")

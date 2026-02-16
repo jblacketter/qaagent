@@ -527,7 +527,7 @@ def run_all(
     console.print()
     total_status = "[green]ALL PASSED[/green]" if result.success else "[red]FAILURES[/red]"
     console.print(
-        f"Total: {total_status} — "
+        f"Total: {total_status} - "
         f"{result.total_passed} passed, {result.total_failed} failed, "
         f"{result.total_errors} errors [{result.total_duration:.1f}s]"
     )

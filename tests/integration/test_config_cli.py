@@ -45,7 +45,7 @@ def test_config_init_and_use(tmp_path: Path) -> None:
 
     list_result = _run_cli(["targets", "list"], cwd=project_dir, env=env)
     assert "sample" in list_result.stdout
-    assert "★" in list_result.stdout  # active indicator
+    assert "*" in list_result.stdout  # active indicator
 
     use_result = _run_cli(["use", "sample"], cwd=project_dir, env=env)
     assert use_result.returncode == 0

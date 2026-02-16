@@ -34,7 +34,7 @@ class _AnalyzeGroup(typer.core.TyperGroup):
         try:
             return super().resolve_command(ctx, args)
         except click.UsageError:
-            # Unrecognized token (e.g. ".") — redirect to 'repo' subcommand
+            # Unrecognized token (e.g. ".") - redirect to 'repo' subcommand
             default = self.get_command(ctx, "repo")
             if default is not None:
                 return "repo", default, args
@@ -146,10 +146,10 @@ def analyze_routes(
         print_routes_table(routes, verbose=verbose)
         if out:
             export_routes(routes, out_path, "json")
-            print(f"[green]Discovered {len(routes)} routes → {out_path}[/green]")
+            print(f"[green]Discovered {len(routes)} routes -> {out_path}[/green]")
     else:
         export_routes(routes, out_path, fmt)
-        print(f"[green]Discovered {len(routes)} routes → {out_path}[/green]")
+        print(f"[green]Discovered {len(routes)} routes -> {out_path}[/green]")
         if verbose:
             print_routes_table(routes, verbose=True)
 
@@ -195,7 +195,7 @@ def analyze_risks_command(
 
     if json_out:
         json_out.write_text(json.dumps([risk.to_dict() for risk in sorted_risks], indent=2), encoding="utf-8")
-        console.print(f"Exported risks → {json_out}")
+        console.print(f"Exported risks -> {json_out}")
 
 
 @analyze_app.command("recommendations")
@@ -234,7 +234,7 @@ def analyze_recommendations_command(
 
     if json_out:
         json_out.write_text(json.dumps([rec.to_dict() for rec in sorted_recs], indent=2), encoding="utf-8")
-        console.print(f"Exported recommendations → {json_out}")
+        console.print(f"Exported recommendations -> {json_out}")
 
 
 @analyze_app.command("strategy")
@@ -283,4 +283,4 @@ def analyze_strategy(
     export_strategy(summary, Path(out), markdown_path)
 
     extra = f" and {markdown_path.as_posix()}" if markdown_path else ""
-    print(f"[green]Strategy generated → {out}{extra}[/green]")
+    print(f"[green]Strategy generated -> {out}{extra}[/green]")

@@ -33,7 +33,7 @@ def doctor(json_out: bool = typer.Option(False, help="Emit machine-readable JSON
                 "system": os.uname().sysname if hasattr(os, "uname") else os.name,
             },
         }
-        print(json.dumps(payload, indent=2))
+        typer.echo(json.dumps(payload, indent=2))
         raise typer.Exit(code=exit_code)
 
     table = Table(title="QA Agent Health Check", show_lines=False)
@@ -63,11 +63,11 @@ def doctor(json_out: bool = typer.Option(False, help="Emit machine-readable JSON
 
     console.rule("Summary")
     if errors:
-        print(f"[red]\u2717 {len(errors)} failing checks[/red]")
+        print(f"[red][FAIL] {len(errors)} failing checks[/red]")
     elif warnings:
-        print(f"[yellow]\u26a0 {len(warnings)} warnings[/yellow]")
+        print(f"[yellow]WARN {len(warnings)} warnings[/yellow]")
     else:
-        print("[green]\u2713 All checks passed[/green]")
+        print("[green][OK] All checks passed[/green]")
     raise typer.Exit(code=exit_code)
 
 
@@ -129,7 +129,7 @@ def fix_issues(
         raise typer.Exit(code=1)
 
     console.print()
-    console.print("[green]\u2713 Fixes applied successfully![/green]")
+    console.print("[green][OK] Fixes applied successfully![/green]")
     console.print("[yellow]Tip:[/yellow] Re-run analysis to verify fixes:")
     console.print(f"  qaagent analyze routes {target_name}")
 
@@ -144,14 +144,14 @@ def web_ui(
         from qaagent.web_ui import start_web_ui
 
         console.print(f"[cyan]Starting QA Agent Web UI...[/cyan]")
-        console.print(f"[green]\u2192 Server: http://{host}:{port}[/green]")
+        console.print(f"[green]-> Server: http://{host}:{port}[/green]")
         console.print()
         console.print("[yellow]Web UI Features:[/yellow]")
-        console.print("  \u2022 Configure targets (local repos or GitHub URLs)")
-        console.print("  \u2022 Discover routes from Next.js projects")
-        console.print("  \u2022 Generate OpenAPI specifications")
-        console.print("  \u2022 View interactive dashboards")
-        console.print("  \u2022 Browse workspace files")
+        console.print("  - Configure targets (local repos or GitHub URLs)")
+        console.print("  - Discover routes from Next.js projects")
+        console.print("  - Generate OpenAPI specifications")
+        console.print("  - View interactive dashboards")
+        console.print("  - Browse workspace files")
         console.print()
         console.print("[dim]Press Ctrl+C to stop the server[/dim]")
         console.print()
@@ -171,7 +171,7 @@ def web_ui(
 
     except KeyboardInterrupt:
         console.print()
-        console.print("[yellow]\u2713 Web UI server stopped[/yellow]")
+        console.print("[yellow][OK] Web UI server stopped[/yellow]")
     except ImportError as e:
         console.print(f"[red]Web UI dependencies not available: {e}[/red]")
         console.print("[yellow]Install UI extras: pip install -e .[ui][/yellow]")

@@ -266,7 +266,7 @@ def generate_test_data(
     records = generator.generate(model_name=model, count=count, output_format=format)
     generator.save(records, output_file, format=format)
 
-    console.print(f"[green]Generated {count} {model} records \u2192 {output_file}[/green]")
+    console.print(f"[green]Generated {count} {model} records -> {output_file}[/green]")
 
 
 @generate_app.command("e2e")
@@ -604,7 +604,7 @@ def generate_ci(
     )
 
     dest = generator.generate(platform, output_dir)
-    console.print(f"[green]Generated {platform} CI pipeline → {dest}[/green]")
+    console.print(f"[green]Generated {platform} CI pipeline -> {dest}[/green]")
     console.print(f"  Framework: {resolved_framework}")
     console.print(f"  Project: {resolved_name}")
     console.print(f"  Suites: unit={suites.unit}, behave={suites.behave}, e2e={suites.e2e}")
@@ -696,10 +696,10 @@ def generate_openapi(
     else:
         output_file.write_text(yaml.dump(spec, default_flow_style=False, sort_keys=False))
 
-    console.print(f"[green]\u2713 OpenAPI spec generated \u2192 {output_file}[/green]")
+    console.print(f"[green][OK] OpenAPI spec generated -> {output_file}[/green]")
     console.print(f"  Paths: {len(spec['paths'])}")
     console.print(f"  Schemas: {len(spec['components']['schemas'])}")
 
     if workspace:
-        console.print(f"[yellow]  \u2192 Files in workspace (not in target project yet)[/yellow]")
-        console.print(f"[yellow]  \u2192 Use 'qaagent workspace apply' to copy to target[/yellow]")
+        console.print(f"[yellow]  -> Files in workspace (not in target project yet)[/yellow]")
+        console.print(f"[yellow]  -> Use 'qaagent workspace apply' to copy to target[/yellow]")

@@ -62,6 +62,13 @@ SYSTEM_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def _module_installed(module: str) -> bool:
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ModuleNotFoundError, ValueError):
+        return False
+
+
 def _command_version(binary: str) -> str | None:
     try:
         proc = subprocess.run([binary, "--version"], capture_output=True, text=True, check=False, timeout=2.0)
@@ -100,8 +107,7 @@ def check_python_version() -> HealthCheck:
 def check_installed_extras() -> List[HealthCheck]:
     results: List[HealthCheck] = []
     for label, module, hint in OPTIONAL_FEATURES:
-        spec = importlib.util.find_spec(module)
-        if spec is None:
+        if not _module_installed(module):
             results.append(
                 HealthCheck(
                     name=f"{label} module",
@@ -177,7 +183,7 @@ def _detect_playwright_browser_path() -> Path:
 
 
 def llm_extras_installed() -> bool:
-    return importlib.util.find_spec("httpx") is not None
+    return _module_installed("httpx")
 
 
 def check_ollama() -> HealthCheck:
@@ -233,6 +239,12 @@ async def _probe_mcp_server() -> tuple[HealthStatus, str, str | None]:
             HealthStatus.ERROR,
             "qaagent-mcp entrypoint not found.",
             "Install MCP extras: pip install -e .[mcp]",
+        )
+    except (PermissionError, OSError) as exc:
+        return (
+            HealthStatus.WARNING,
+            f"Unable to launch qaagent-mcp: {exc}",
+            "Try again from a standard terminal with subprocess permissions.",
         )
     await asyncio.sleep(0.2)
     if proc.returncode is not None:

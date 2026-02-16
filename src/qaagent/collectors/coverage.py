@@ -141,7 +141,7 @@ class CoverageCollector:
                             CoverageRecord(
                                 coverage_id=id_generator.next_id("cov"),
                                 type="line",
-                                component=current_file,
+                                component=self._normalize_component(current_file),
                                 value=value,
                                 total_statements=total or None,
                                 covered_statements=covered or None,
@@ -166,7 +166,7 @@ class CoverageCollector:
                         CoverageRecord(
                             coverage_id=id_generator.next_id("cov"),
                             type="line",
-                            component=current_file,
+                            component=self._normalize_component(current_file),
                             value=value,
                             total_statements=total or None,
                             covered_statements=covered or None,
@@ -183,17 +183,21 @@ class CoverageCollector:
         candidate = Path(filename)
         if candidate.is_absolute():
             try:
-                return str(candidate.relative_to(repo_root))
+                return self._normalize_component(candidate.relative_to(repo_root))
             except ValueError:
-                return str(candidate)
+                return self._normalize_component(candidate)
         for source in sources:
             try:
                 combined = Path(source) / filename
                 if combined.exists():
                     try:
-                        return str(combined.relative_to(repo_root))
+                        return self._normalize_component(combined.relative_to(repo_root))
                     except ValueError:
-                        return str(combined)
+                        return self._normalize_component(combined)
             except Exception:  # pragma: no cover - defensive
                 continue
-        return str(Path(repo_root / filename).relative_to(repo_root))
+        return self._normalize_component(Path(repo_root / filename).relative_to(repo_root))
+
+    @staticmethod
+    def _normalize_component(path: Path | str) -> str:
+        return str(path).replace("\\", "/")

@@ -45,18 +45,18 @@ def workspace_show(
         for filename, file_info in info["files"].items():
             if filename.startswith("openapi."):
                 size_kb = file_info["size"] / 1024
-                console.print(f"  \u2713 {filename} ({size_kb:.1f} KB)")
+                console.print(f"  [OK] {filename} ({size_kb:.1f} KB)")
             elif filename == "tests":
                 unit_count = file_info.get("unit", 0)
                 behave_count = file_info.get("behave", 0)
                 if unit_count > 0:
-                    console.print(f"  \u2713 tests/unit/ ({unit_count} files)")
+                    console.print(f"  [OK] tests/unit/ ({unit_count} files)")
                 if behave_count > 0:
-                    console.print(f"  \u2713 tests/behave/ ({behave_count} files)")
+                    console.print(f"  [OK] tests/behave/ ({behave_count} files)")
             elif filename == "reports":
-                console.print(f"  \u2713 reports/ ({file_info} files)")
+                console.print(f"  [OK] reports/ ({file_info} files)")
             elif filename == "fixtures":
-                console.print(f"  \u2713 fixtures/ ({file_info} files)")
+                console.print(f"  [OK] fixtures/ ({file_info} files)")
     else:
         console.print("[yellow]  No files generated yet[/yellow]")
 
@@ -80,7 +80,7 @@ def workspace_list():
             1 if not isinstance(v, dict) else sum(v.values())
             for v in info.get("files", {}).values()
         )
-        console.print(f"  \u2022 {target_name} ({file_count} files)")
+        console.print(f"  - {target_name} ({file_count} files)")
 
 
 @workspace_app.command("clean")
@@ -98,7 +98,7 @@ def workspace_clean(
         if not force:
             typer.confirm("Clean ALL workspaces?", abort=True)
         ws.clean_all()
-        console.print("[green]\u2713 All workspaces cleaned[/green]")
+        console.print("[green][OK] All workspaces cleaned[/green]")
         return
 
     # Get target name
@@ -114,7 +114,7 @@ def workspace_clean(
         typer.confirm(f"Clean workspace for '{target}'?", abort=True)
 
     ws.clean_target(target)
-    console.print(f"[green]\u2713 Workspace cleaned for '{target}'[/green]")
+    console.print(f"[green][OK] Workspace cleaned for '{target}'[/green]")
 
 
 @workspace_app.command("apply")
@@ -159,8 +159,8 @@ def workspace_apply(
     if dry_run:
         console.print(f"[cyan]Would copy {len(copied)} files:[/cyan]")
     else:
-        console.print(f"[green]\u2713 Copied {len(copied)} files to target:[/green]")
+        console.print(f"[green][OK] Copied {len(copied)} files to target:[/green]")
 
     for src, dest in copied:
         rel_dest = dest.relative_to(target_path) if dest.is_relative_to(target_path) else dest
-        console.print(f"  {src.name} \u2192 {rel_dest}")
+        console.print(f"  {src.name} -> {rel_dest}")

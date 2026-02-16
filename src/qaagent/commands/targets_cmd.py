@@ -27,7 +27,7 @@ def targets_list() -> None:
     table.add_column("Type", style="magenta")
 
     for entry in entries:
-        is_active = "\u2605" if registry.active == entry.name else ""
+        is_active = "*" if registry.active == entry.name else ""
         table.add_row(is_active, entry.name, entry.path, entry.project_type or "-")
 
     if not entries:
@@ -78,4 +78,4 @@ def use_target(name: str = typer.Argument(..., help="Target name to activate")) 
         print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1)
     else:
-        print(f"[green]Active target:[/green] {entry.name} \u2192 {entry.path}")
+        print(f"[green]Active target:[/green] {entry.name} -> {entry.path}")

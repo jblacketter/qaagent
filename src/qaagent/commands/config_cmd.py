@@ -179,7 +179,7 @@ def config_migrate(
         raise typer.Exit(code=1)
 
     yaml_path.write_text(yaml_content, encoding="utf-8")
-    print(f"[green]Migrated:[/green] {toml_path} \u2192 {yaml_path}")
+    print(f"[green]Migrated:[/green] {toml_path} -> {yaml_path}")
     console.print()
     console.print("[cyan]Generated .qaagent.yaml:[/cyan]")
     console.print(yaml_content)

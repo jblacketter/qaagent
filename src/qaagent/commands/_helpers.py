@@ -209,7 +209,7 @@ def clone_repository(url: str) -> Path:
         local_path = cloner.clone(url, depth=1)
         cache.register_clone(url, local_path)
 
-        print(f"[green]✓[/green] Cloned to {local_path}")
+        print(f"[green][OK][/green] Cloned to {local_path}")
         return local_path
 
     except Exception as e:
@@ -226,10 +226,10 @@ def print_fix_result(result) -> None:
     """Print the result of an auto-fix operation."""
     if result.success:
         if result.files_modified > 0:
-            console.print(f"[green]  ✓ {result.message}[/green]")
+            console.print(f"[green]  [OK] {result.message}[/green]")
         else:
-            console.print(f"[dim]  ✓ {result.message} (no changes needed)[/dim]")
+            console.print(f"[dim]  [OK] {result.message} (no changes needed)[/dim]")
     else:
-        console.print(f"[red]  ✗ {result.message}[/red]")
+        console.print(f"[red]  [FAIL] {result.message}[/red]")
         for error in result.errors:
             console.print(f"[red]    {error}[/red]")
