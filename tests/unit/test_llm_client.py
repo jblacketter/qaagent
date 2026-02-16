@@ -1,6 +1,7 @@
 """Tests for the LLMClient class and typed models."""
 from __future__ import annotations
 
+import importlib.util
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,6 +13,8 @@ from qaagent.llm import (
     QAAgentLLMError,
     llm_available,
 )
+
+_has_litellm = importlib.util.find_spec("litellm") is not None
 
 
 class TestChatMessage:
@@ -86,6 +89,7 @@ class TestLLMClient:
             with patch("builtins.__import__", side_effect=ImportError("no litellm")):
                 pass  # Can't easily test this without breaking other imports
 
+    @pytest.mark.skipif(not _has_litellm, reason="litellm not installed")
     @patch("litellm.completion")
     def test_chat_returns_typed_response(self, mock_completion):
         # Mock litellm response
@@ -107,6 +111,7 @@ class TestLLMClient:
         assert response.model == "test-model"
         assert response.usage["total_tokens"] == 15
 
+    @pytest.mark.skipif(not _has_litellm, reason="litellm not installed")
     @patch("litellm.completion", side_effect=Exception("API error"))
     def test_chat_wraps_errors(self, mock_completion):
         client = LLMClient(provider="anthropic", model="test")

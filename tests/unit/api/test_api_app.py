@@ -3,9 +3,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+import pytest
 
-from qaagent.api.app import create_app
+fastapi = pytest.importorskip("fastapi", reason="fastapi not installed")
+from fastapi.testclient import TestClient  # noqa: E402
+
+from qaagent.api.app import create_app  # noqa: E402
 from qaagent.evidence import (
     CoverageRecord,
     EvidenceIDGenerator,

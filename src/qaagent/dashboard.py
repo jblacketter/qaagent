@@ -97,7 +97,7 @@ def generate_dashboard(
         routes_dict=routes_dict,
     )
 
-    output_path.write_text(html_content)
+    output_path.write_text(html_content, encoding="utf-8")
 
     return output_path
 

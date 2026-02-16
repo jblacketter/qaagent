@@ -14,7 +14,7 @@ class TestCICDGenerator:
 
         assert dest.exists()
         assert dest.name == "qa-pipeline.yml"
-        assert ".github/workflows" in str(dest)
+        assert ".github/workflows" in dest.as_posix()
         content = dest.read_text()
         assert "QA Pipeline" in content
 

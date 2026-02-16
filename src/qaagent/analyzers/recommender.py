@@ -76,7 +76,7 @@ class RecommendationEngine:
     def _build_details(self, risk: RiskRecord) -> str:
         details = (
             f"Risk score {risk.score:.1f} (band {risk.band}). "
-            f"Factors: {', '.join(f"{k}={v:.1f}" for k, v in risk.factors.items())}\n\n"
+            f"Factors: {', '.join(f'{k}={v:.1f}' for k, v in risk.factors.items())}\n\n"
         )
 
         # Add actionable fix commands based on risk factors

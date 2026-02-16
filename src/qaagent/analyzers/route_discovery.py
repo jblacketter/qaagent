@@ -129,9 +129,8 @@ def deduplicate_routes(routes: List[Route]) -> List[Route]:
             merged[key] = route
             continue
 
-        # Merge metadata such as tags
+        # Merge additive collections (tags, params) from lower-confidence duplicate
         existing.tags = sorted(set(existing.tags) | set(route.tags))
-        existing.metadata.update(route.metadata)
         for category, items in route.params.items():
             existing.params.setdefault(category, [])
             existing.params[category].extend(

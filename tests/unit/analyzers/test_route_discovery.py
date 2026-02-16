@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 
 from qaagent.analyzers.models import RouteSource
@@ -29,7 +30,7 @@ def test_discover_from_openapi_extracts_auth_and_metadata() -> None:
 
 def test_deduplicate_routes_prefers_higher_confidence() -> None:
     original = discover_from_openapi(FIXTURE_DIR / "secure_openapi.yaml")
-    duplicate = original[0]
+    duplicate = copy.deepcopy(original[0])
     duplicate.confidence = 0.5
     duplicate.metadata["source"] = "duplicate"
 

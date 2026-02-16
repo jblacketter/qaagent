@@ -1,9 +1,14 @@
 """Tests for a11y.py — A11yResult and run_axe."""
 from __future__ import annotations
 
+import importlib.util
 from unittest.mock import MagicMock, patch, PropertyMock
 
+import pytest
+
 from qaagent.a11y import A11yResult, AXE_CDN
+
+_has_playwright = importlib.util.find_spec("playwright") is not None
 
 
 class TestA11yResult:
@@ -41,6 +46,7 @@ def _setup_playwright_mock(mock_pw_cls, page_evaluate_return):
     return mock_page
 
 
+@pytest.mark.skipif(not _has_playwright, reason="playwright not installed")
 class TestRunAxe:
     @patch("playwright.sync_api.sync_playwright")
     def test_run_axe_basic(self, mock_pw_cls, tmp_path):

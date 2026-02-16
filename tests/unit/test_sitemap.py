@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("httpx", reason="httpx not installed")
+
 
 VALID_SITEMAP = """\
 <?xml version="1.0" encoding="UTF-8"?>

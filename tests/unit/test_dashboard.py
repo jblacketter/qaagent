@@ -57,7 +57,7 @@ class TestGenerateDashboard:
 
         assert result == output
         assert output.exists()
-        content = output.read_text()
+        content = output.read_text(encoding="utf-8")
         assert "<html" in content.lower() or "<!doctype" in content.lower()
 
     def test_html_contains_project_name(self, tmp_path: Path):
@@ -67,7 +67,7 @@ class TestGenerateDashboard:
 
         generate_dashboard(routes, risks, output, project_name="PetStore")
 
-        content = output.read_text()
+        content = output.read_text(encoding="utf-8")
         assert "PetStore" in content
 
     def test_html_contains_risk_data(self, tmp_path: Path):
@@ -77,7 +77,7 @@ class TestGenerateDashboard:
 
         generate_dashboard(routes, risks, output)
 
-        content = output.read_text()
+        content = output.read_text(encoding="utf-8")
         # Check for risk-related content
         assert "security" in content.lower() or "high" in content.lower()
 
