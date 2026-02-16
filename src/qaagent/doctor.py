@@ -37,10 +37,28 @@ OPTIONAL_FEATURES: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def _install_hint(package: str) -> str:
+    """Return a platform-appropriate install suggestion."""
+    system = platform.system()
+    hints = {
+        "node": {
+            "Darwin": "brew install node",
+            "Linux": "sudo apt install nodejs npm  # or your distro's package manager",
+            "Windows": "winget install OpenJS.NodeJS.LTS",
+        },
+        "git": {
+            "Darwin": "brew install git",
+            "Linux": "sudo apt install git",
+            "Windows": "winget install Git.Git",
+        },
+    }
+    return hints.get(package, {}).get(system, f"Install {package} for your platform")
+
+
 SYSTEM_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
-    ("Node.js", "node", "brew install node"),
-    ("npm", "npm", "brew install node"),
-    ("Git", "git", "brew install git"),
+    ("Node.js", "node", _install_hint("node")),
+    ("npm", "npm", _install_hint("node")),
+    ("Git", "git", _install_hint("git")),
 )
 
 
@@ -72,7 +90,10 @@ def check_python_version() -> HealthCheck:
         name=name,
         status=HealthStatus.ERROR,
         message=f"{ver.major}.{ver.minor}.{ver.micro}",
-        suggestion="Install Python 3.11 or 3.12 (e.g., `brew install python@3.12`).",
+        suggestion="Install Python 3.11 or 3.12 (e.g., `{hint}`).".format(
+            hint="py -3.12" if platform.system() == "Windows"
+            else "brew install python@3.12"
+        ),
     )
 
 
@@ -165,7 +186,10 @@ def check_ollama() -> HealthCheck:
             name="Ollama",
             status=HealthStatus.WARNING,
             message="Ollama CLI not found",
-            suggestion="Install with `brew install ollama` and run `ollama serve`.",
+            suggestion="Install with `{hint}` and run `ollama serve`.".format(
+                hint="winget install Ollama.Ollama" if platform.system() == "Windows"
+                else "brew install ollama"
+            ),
         )
     try:
         import httpx  # type: ignore

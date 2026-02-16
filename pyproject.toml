@@ -31,6 +31,7 @@ config = ["python-dotenv>=1.0"]
 llm = [
     "ollama>=0.1.0",
     "litellm>=1.40.0; python_version >= '3.9'",
+    "uvloop>=0.14; sys_platform != 'win32'",
 ]
 cov = ["pytest-cov>=4.1"]
 perf = ["locust"]

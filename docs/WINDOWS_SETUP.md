@@ -16,11 +16,17 @@ cd path\to\your\workspace
 git clone <your-repo-url> qaagent
 cd qaagent
 py -3.11 -m venv .venv
-. .venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip wheel
 ```
 
 ## Install Dependencies
+
+> **Note:** The `[llm]` extras include `litellm` which may attempt to install `uvloop`.
+> `uvloop` does not support Windows. The project pins `uvloop` with a platform marker
+> so it is excluded automatically on Windows. If you see uvloop-related errors, ensure
+> you are installing from the latest `pyproject.toml`.
+
 Install the subsets you need:
 ```powershell
 # Base CLI + tests
@@ -38,6 +44,9 @@ pip install -e .[perf]
 
 # Reports (HTML rendering)
 pip install -e .[report]
+
+# LLM features (Ollama + litellm)
+pip install -e .[llm]
 
 # Config convenience (.env auto-load)
 pip install -e .[config]

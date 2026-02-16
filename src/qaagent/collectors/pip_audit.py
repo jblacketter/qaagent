@@ -140,7 +140,7 @@ class PipAuditCollector:
         return tokens[0] if tokens else None
 
     def _write_artifact(self, handle: RunHandle, stdout: str, manifest: str) -> None:
-        safe_manifest = manifest.replace("/", "_")
+        safe_manifest = manifest.replace("\\", "_").replace("/", "_")
         artifact = handle.artifacts_dir / f"pip_audit_{safe_manifest}.json"
         artifact.write_text(stdout if stdout.endswith("\n") else stdout + "\n", encoding="utf-8")
 

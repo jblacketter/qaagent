@@ -142,7 +142,7 @@ class Flake8Collector:
                 continue
             groups = match.groupdict()
             file_path = groups.get("file") or ""
-            if file_path.startswith("./"):
+            if file_path.startswith("./") or file_path.startswith(".\\"):
                 file_path = file_path[2:]
             findings.append(
                 FindingRecord(
