@@ -6,7 +6,7 @@
 
 **Tech Stack:** Python 3.11+, Typer, Pydantic v2, Jinja2, litellm, FastAPI, Playwright, pytest, Behave
 
-**Workflow:** Lead (claude) / Reviewer (codex) with Human Arbiter (see `ai-handoff.yaml`)
+**Workflow:** Lead (codex) / Reviewer (claude) with Human Arbiter (see `ai-handoff.yaml`)
 
 ## Completed Work
 
@@ -14,64 +14,21 @@
 - **Phase 2: Test Framework Generation** — BaseGenerator ABC, LLM enhancer, Playwright/Behave/pytest generators, validator
 - **Phase 3: Intelligent Test Orchestration** — Unified runners, RunOrchestrator, FailureDiagnostics, `run-all`
 - **Phase 4: Enhanced Analysis** — AST-based parsers (FastAPI/Flask/Django/Next.js), 16 risk rules, CI/CD templates
+- **Phase 5: Hardening & Test Coverage** — 22 new test files, 305 tests across P1-P5 (core infra, config/repo, utilities, CLI commands, API routes)
+- **Phase 6: App Documentation & Architecture Mapping** — Doc engine (feature grouping, integration detection, CUJ discovery, architecture graphs), CLI (`doc generate/show/export/cujs`), API endpoints, 13 React dashboard components, 179 doc-specific tests
+- **Phase 7: Custom Risk Rules via YAML** — YAML rule schema (`yaml_loader.py`, `yaml_rule.py`), match conditions (path/method/auth/tags/deprecated), severity escalation, severity overrides (post-processing), merge semantics (file+inline), collision protection, CLI (`rules list/show/validate`), 78 new tests
+- **Phase 8: Parallel Test Execution** — Concurrent orchestration support for generated suites with merged result handling and failure diagnostics integration
+- **Phase 9: Coverage Gap Analysis** — Route-level coverage mapping from JUnit/OpenAPI with `analyze coverage-gaps` CLI and report integration
+- **Phase 10: RAG-Powered Test Generation** — Local repo indexing (`rag index/query`) and retrieval-aware prompt enhancement for test generation
+- **Phase 11: New Language Parsers** — Source route discovery support for Go (net/http, Gin, Echo), Ruby (Rails, Sinatra), and Rust (Actix, Axum)
+- **Phase 12: Notifications & Reporting** — CI summary formatting plus Slack webhook and SMTP email notifications via `qaagent notify`
+- **Phase 13: Live DOM Inspection** — `analyze dom` command for Playwright-based selector coverage analysis (inventory, forms, nav links, and recommendations)
+- **Phase 14: Live UI Route Crawling** — `analyze routes --crawl` for Playwright-based runtime UI route discovery with depth/page bounds and profile-aware auth/session defaults
+- **Phase 15: AI-Assisted Test Recording** — `qaagent record` for browser flow capture and export to Playwright/Behave test assets with selector ranking and sensitive input redaction
 
 ## Upcoming Phases
 
-### Phase 5: Hardening & Test Coverage
-- **Status:** Not Started
-- **Description:** Fill test coverage gaps across core modules, harden utilities, improve reliability of the framework itself.
-- **Key Deliverables:**
-  - Tests for untested modules (behave_runner, evidence/writer, tools, autofix, command modules, API routes)
-  - Config utility coverage (detect, templates, legacy)
-  - Repo package coverage (cache, validator)
-
-### Phase 6: Custom Risk Rules via YAML
-- **Status:** Not Started
-- **Description:** Allow users to define custom risk rules in YAML without writing Python code, extending the pluggable rule engine.
-- **Key Deliverables:**
-  - YAML rule schema and loader
-  - Integration with RiskRuleRegistry
-  - Documentation and example rules
-
-### Phase 7: Parallel Test Execution
-- **Status:** Not Started
-- **Description:** Run test suites concurrently across runners for faster feedback loops.
-- **Key Deliverables:**
-  - Concurrent suite execution in RunOrchestrator
-  - Result aggregation from parallel runs
-  - Resource-aware scheduling (CPU, browser instances)
-
-### Phase 8: Coverage Gap Analysis
-- **Status:** Not Started
-- **Description:** Map JUnit test results back to discovered routes and source code, identifying untested paths and coverage holes.
-- **Key Deliverables:**
-  - JUnit-to-route mapping engine
-  - Coverage gap report generation
-  - Integration with `analyze` and `report` commands
-
-### Phase 9: RAG-Powered Test Generation
-- **Status:** Not Started
-- **Description:** Index repository code, docs, and specs to provide rich context for LLM-powered test generation.
-- **Key Deliverables:**
-  - Document/code indexing pipeline
-  - RAG retrieval for test generation context
-  - Enhanced LLMTestEnhancer with retrieval
-
-### Phase 10: New Language Parsers
-- **Status:** Not Started
-- **Description:** Extend route discovery to Go, Ruby, and Rust web frameworks.
-- **Key Deliverables:**
-  - Go parser (net/http, Gin, Echo)
-  - Ruby parser (Rails, Sinatra)
-  - Rust parser (Actix, Axum)
-
-### Phase 11: Notifications & Reporting
-- **Status:** Not Started
-- **Description:** Integrate Slack/email notifications for CI findings summaries and expand reporting capabilities.
-- **Key Deliverables:**
-  - Slack webhook integration
-  - Email notification support
-  - CI-friendly summary output formats
+- No additional roadmap phases are defined yet.
 
 ### Phase 12: Security Scanning Integration
 - **Status:** Not Started (low priority — revisit when core framework is stable)

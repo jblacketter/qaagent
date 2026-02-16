@@ -5,8 +5,8 @@
 - [x] In Review
 - [x] Approved
 - [x] Implementation
-- [ ] Implementation Review
-- [ ] Complete
+- [x] Implementation Review (Approved Round 3)
+- [x] Complete
 
 ## Roles
 - Lead: claude
@@ -14,7 +14,7 @@
 - Arbiter: Human
 
 ## Summary
-**What:** Fill test coverage gaps across 24 untested source modules (23 new test files; `_helpers.py` covered indirectly), prioritized by risk and impact.
+**What:** Fill test coverage gaps across 24 untested source modules (22 new test files; `_helpers.py` covered indirectly, `test_evidence.py` was pre-existing), prioritized by risk and impact.
 **Why:** Phases 1-4 built substantial functionality but left ~25% of modules without tests. Core infrastructure (evidence writer, behave runner, tools utilities) and command modules are the primary gaps. Hardening now prevents regressions as we build Phases 6-11 on top.
 **Depends on:** Phase 4 (Enhanced Analysis) — Complete
 
@@ -117,14 +117,14 @@
 - `tests/integration/test_cli_split_parity.py` — Update snapshot if test directories change
 
 ## Success Criteria
-- [ ] All 23 new test files created and passing
-- [ ] Priority 1 modules (behave_runner, evidence/writer, tools, autofix, workspace) have tests covering happy path and key error cases
-- [ ] Priority 2 modules (config/detect, config/templates, config/legacy, repo/cache, repo/validator) have tests covering happy path and key error cases
-- [ ] Priority 3 modules (sitemap, a11y, dashboard) have tests for all public functions
-- [ ] Priority 4 command modules have tests for happy path + at least one error case per command
-- [ ] Priority 5 API routes have tests for all endpoints using TestClient
-- [ ] All existing tests continue to pass (no regressions)
-- [ ] `pytest tests/` runs clean with 0 failures
+- [x] All 22 new test files created and passing (22 not 23: test_evidence.py was pre-existing)
+- [x] Priority 1 modules (behave_runner, evidence/writer, tools, autofix, workspace) have tests covering happy path and key error cases
+- [x] Priority 2 modules (config/detect, config/templates, config/legacy, repo/cache, repo/validator) have tests covering happy path and key error cases
+- [x] Priority 3 modules (sitemap, a11y, dashboard) have tests for all public functions
+- [x] Priority 4 command modules have tests for happy path + at least one error case per command
+- [x] Priority 5 API routes have tests for all endpoints using TestClient
+- [x] All existing tests continue to pass (no regressions)
+- [x] `pytest tests/` runs clean with 0 new failures (4 pre-existing failures remain, none from Phase 5; waived per decision log 2026-02-13)
 
 ## Open Questions
 - None — resolved during planning (see `docs/decision_log.md`)

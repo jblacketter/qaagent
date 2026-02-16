@@ -69,6 +69,21 @@ class TestDetectProjectType:
         v = RepoValidator(tmp_path)
         assert v.detect_project_type() is None
 
+    def test_go_from_go_mod(self, tmp_path):
+        (tmp_path / "go.mod").write_text("module example.com/app\nrequire github.com/gin-gonic/gin v1.9.0\n")
+        v = RepoValidator(tmp_path)
+        assert v.detect_project_type() == "go"
+
+    def test_ruby_from_gemfile(self, tmp_path):
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\ngem "rails"\n')
+        v = RepoValidator(tmp_path)
+        assert v.detect_project_type() == "ruby"
+
+    def test_rust_from_cargo(self, tmp_path):
+        (tmp_path / "Cargo.toml").write_text("[dependencies]\naxum = \"0.7\"\n")
+        v = RepoValidator(tmp_path)
+        assert v.detect_project_type() == "rust"
+
 
 class TestValidate:
     def test_valid_nextjs_with_routes(self, tmp_path):
@@ -117,6 +132,38 @@ class TestValidate:
         assert result["project_type"] is None
         assert "Unknown project type" in result["issues"][0]
 
+    def test_valid_go_with_routes(self, tmp_path):
+        (tmp_path / "go.mod").write_text("module x\nrequire github.com/gin-gonic/gin v1.9.0\n")
+        (tmp_path / "main.go").write_text('package main\nfunc main(){ r := gin.Default(); r.GET("/health", h) }')
+
+        result = RepoValidator(tmp_path).validate()
+
+        assert result["valid"] is True
+        assert result["project_type"] == "go"
+        assert result["api_routes_found"] is True
+
+    def test_valid_ruby_with_routes(self, tmp_path):
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\ngem "sinatra"\n')
+        (tmp_path / "app.rb").write_text('get "/health" do\n "ok"\nend\n')
+
+        result = RepoValidator(tmp_path).validate()
+
+        assert result["valid"] is True
+        assert result["project_type"] == "ruby"
+        assert result["api_routes_found"] is True
+
+    def test_valid_rust_with_routes(self, tmp_path):
+        (tmp_path / "Cargo.toml").write_text("[dependencies]\nactix-web = \"4\"\n")
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "main.rs").write_text('#[get("/health")]\nasync fn health() {}')
+
+        result = RepoValidator(tmp_path).validate()
+
+        assert result["valid"] is True
+        assert result["project_type"] == "rust"
+        assert result["api_routes_found"] is True
+
 
 class TestGetApiDirectory:
     def test_nextjs_src_app_api(self, tmp_path):
@@ -144,3 +191,21 @@ class TestGetApiDirectory:
     def test_unknown_returns_none(self, tmp_path):
         v = RepoValidator(tmp_path)
         assert v.get_api_directory() is None
+
+    def test_go_returns_root(self, tmp_path):
+        (tmp_path / "go.mod").write_text("module x\nrequire github.com/gin-gonic/gin v1.9.0\n")
+
+        v = RepoValidator(tmp_path)
+        assert v.get_api_directory() == tmp_path
+
+    def test_ruby_returns_root(self, tmp_path):
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\ngem "rails"\n')
+
+        v = RepoValidator(tmp_path)
+        assert v.get_api_directory() == tmp_path
+
+    def test_rust_returns_root(self, tmp_path):
+        (tmp_path / "Cargo.toml").write_text("[dependencies]\naxum = \"0.7\"\n")
+
+        v = RepoValidator(tmp_path)
+        assert v.get_api_directory() == tmp_path

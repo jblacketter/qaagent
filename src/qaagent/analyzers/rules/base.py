@@ -42,6 +42,7 @@ class RiskRuleRegistry:
 
     def __init__(self) -> None:
         self._rules: Dict[str, RiskRule] = {}
+        self.severity_overrides: Dict[str, str] = {}
 
     def register(self, rule: RiskRule) -> None:
         self._rules[rule.rule_id] = rule
@@ -73,4 +74,12 @@ class RiskRuleRegistry:
             if rule_id in disabled:
                 continue
             risks.extend(rule.evaluate_all(routes))
+
+        # Apply severity overrides as post-processing
+        if self.severity_overrides:
+            for risk in risks:
+                override = self.severity_overrides.get(risk.source)
+                if override:
+                    risk.severity = RiskSeverity(override)
+
         return risks

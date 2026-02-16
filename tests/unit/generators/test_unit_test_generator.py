@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -308,3 +309,16 @@ class TestUnitTestGenerator:
         scalar_cases = [-1, 0, "invalid", None, ""]
         result = UnitTestGenerator._normalize_edge_cases(scalar_cases)
         assert result == [-1, 0, "invalid", None, ""]
+
+    def test_retrieval_context_passed_to_enhancer(self) -> None:
+        route = sample_route(path="/pets/{pet_id}", method="GET")
+        generator = UnitTestGenerator(routes=[route], retrieval_context=["src/pets.py:1-2\ncontext"])
+        mock_enhancer = MagicMock()
+        mock_enhancer.enhance_assertions.return_value = ["assert response.status_code == 200"]
+        mock_enhancer.generate_edge_cases.return_value = [{"params": {"pet_id": -1}}]
+        generator._get_enhancer = lambda: mock_enhancer  # type: ignore[method-assign]
+
+        _ = generator._create_test_cases(route)
+
+        assert mock_enhancer.enhance_assertions.call_args.kwargs["retrieval_context"] == generator.retrieval_context
+        assert mock_enhancer.generate_edge_cases.call_args.kwargs["retrieval_context"] == generator.retrieval_context

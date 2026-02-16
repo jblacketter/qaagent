@@ -243,6 +243,11 @@ def render_markdown(
         parts += ["", "## API Coverage (Schemathesis)"]
         parts.append(f"- Spec: {cov.get('spec')}")
         parts.append(f"- Covered operations: {cov.get('covered')}/{cov.get('total')} ({cov.get('pct')}%)")
+        priority_samples = cov.get("priority_uncovered_samples") or []
+        if priority_samples:
+            parts.append("- Top uncovered (priority):")
+            for item in priority_samples[:10]:
+                parts.append(f"  - {item['priority']}: {item['method']} {item['path']}")
         samples = cov.get("uncovered_samples") or []
         if samples:
             parts.append("- Uncovered samples:")
@@ -493,6 +498,13 @@ def render_html(
         <table><tbody>
           <tr><td class="muted">Spec</td><td>{{ extras['api_coverage']['spec'] }}</td></tr>
           <tr><td class="muted">Covered</td><td>{{ extras['api_coverage']['covered'] }}/{{ extras['api_coverage']['total'] }} ({{ extras['api_coverage']['pct'] }}%)</td></tr>
+          {% if extras['api_coverage'].get('priority_uncovered_samples') %}
+          <tr><td class="muted">Top uncovered (priority)</td><td>
+            {% for item in extras['api_coverage']['priority_uncovered_samples'][:10] %}
+              <div>{{ item['priority'] }}: {{ item['method'] }} {{ item['path'] }}</div>
+            {% endfor %}
+          </td></tr>
+          {% endif %}
           {% if extras['api_coverage'].get('uncovered_samples') %}
           <tr><td class="muted">Uncovered samples</td><td>
             {% for item in extras['api_coverage']['uncovered_samples'][:10] %}
@@ -801,17 +813,15 @@ def summarize_code_coverage(files: List[str]) -> Dict[str, object] | None:
 
 def summarize_api_coverage(artifacts: Dict[str, List[str]]) -> Dict[str, object] | None:
     try:
-        from .openapi_utils import (
-            load_openapi,
-            enumerate_operations,
-            covered_operations_from_junit_case_names,
-            find_openapi_candidates,
-        )
+        from .analyzers.route_coverage import build_route_coverage
+        from .openapi_utils import find_openapi_candidates
     except Exception:
         return None
+
     junit_files = [Path(p) for p in artifacts.get("junit", []) if Path(p).exists()]
     if not junit_files:
         return None
+
     # Pick a spec file if available
     spec_path: str | None = None
     cands = find_openapi_candidates(Path.cwd())
@@ -819,30 +829,24 @@ def summarize_api_coverage(artifacts: Dict[str, List[str]]) -> Dict[str, object]
         spec_path = cands[0].as_posix()
     if not spec_path:
         return None
+
     try:
-        spec = load_openapi(spec_path)
-        ops = enumerate_operations(spec)
+        summary = build_route_coverage(
+            openapi_path=spec_path,
+            junit_files=junit_files,
+        )
     except Exception:
         return None
-    total_ops = len(ops)
-    if total_ops == 0:
-        return None
-    # Gather covered from junit case names
-    from .report import parse_junit as _parse_junit  # local import to avoid cycles
 
-    case_names: List[str] = []
-    for f in junit_files:
-        suites = _parse_junit(f)
-        for s in suites:
-            for c in s.cases:
-                case_names.append(c.name)
-    covered = set(covered_operations_from_junit_case_names(case_names))
-    covered_count = sum(1 for op in ops if (op.method, op.path) in covered)
-    uncovered = [(op.method, op.path) for op in ops if (op.method, op.path) not in covered]
+    if not summary:
+        return None
+
     return {
-        "spec": spec_path,
-        "covered": covered_count,
-        "total": total_ops,
-        "pct": round((covered_count * 100.0 / total_ops), 1),
-        "uncovered_samples": uncovered[:20],
+        "spec": summary.get("spec"),
+        "covered": summary.get("covered", 0),
+        "total": summary.get("total", 0),
+        "pct": summary.get("pct", 0.0),
+        "uncovered_samples": summary.get("uncovered_samples", []),
+        "priority_uncovered_samples": summary.get("priority_uncovered_samples", []),
+        "uncovered": summary.get("uncovered", []),
     }

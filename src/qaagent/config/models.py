@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -77,6 +77,9 @@ class ExcludeSettings(BaseModel):
 class RiskAssessmentSettings(BaseModel):
     disable_rules: List[str] = Field(default_factory=list)
     severity_thresholds: Dict[str, List[str]] = Field(default_factory=dict)
+    custom_rules: List[Dict[str, Any]] = Field(default_factory=list)
+    custom_rules_file: Optional[str] = None
+    severity_overrides: Dict[str, str] = Field(default_factory=dict)
 
 
 class LLMSettings(BaseModel):
@@ -94,6 +97,28 @@ class RunSettings(BaseModel):
         default_factory=lambda: ["unit", "behave", "e2e"],
         description="Order in which test suites are executed",
     )
+    parallel: bool = Field(default=False, description="Run suites concurrently")
+    max_workers: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Max concurrent suites (defaults to number of enabled suites)",
+    )
+
+
+class DocIntegrationOverride(BaseModel):
+    """Manual integration override for doc generation."""
+    name: str
+    type: str = "unknown"
+    description: str = ""
+    env_vars: List[str] = Field(default_factory=list)
+    connected_features: List[str] = Field(default_factory=list)
+
+
+class DocSettings(BaseModel):
+    """Settings for app documentation generation."""
+    integrations: List[DocIntegrationOverride] = Field(default_factory=list)
+    exclude_features: List[str] = Field(default_factory=list)
+    custom_summary: Optional[str] = None
 
 
 class QAAgentProfile(BaseModel):
@@ -105,11 +130,20 @@ class QAAgentProfile(BaseModel):
     risk_assessment: RiskAssessmentSettings = Field(default_factory=RiskAssessmentSettings)
     llm: Optional[LLMSettings] = None
     run: RunSettings = Field(default_factory=RunSettings)
+    doc: DocSettings = Field(default_factory=DocSettings)
 
     def resolve_spec_path(self, project_root: Path) -> Optional[Path]:
         if not self.openapi.spec_path:
             return None
         candidate = Path(self.openapi.spec_path)
+        if not candidate.is_absolute():
+            candidate = project_root / candidate
+        return candidate
+
+    def resolve_custom_rules_path(self, project_root: Path) -> Optional[Path]:
+        if not self.risk_assessment.custom_rules_file:
+            return None
+        candidate = Path(self.risk_assessment.custom_rules_file)
         if not candidate.is_absolute():
             candidate = project_root / candidate
         return candidate

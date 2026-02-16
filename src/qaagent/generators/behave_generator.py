@@ -36,6 +36,7 @@ class BehaveGenerator(BaseGenerator):
         base_url: Optional[str] = None,
         project_name: str = "Application",
         llm_settings: Optional[LLMSettings] = None,
+        retrieval_context: Optional[List[str]] = None,
     ) -> None:
         super().__init__(
             routes=list(routes),
@@ -44,6 +45,7 @@ class BehaveGenerator(BaseGenerator):
             base_url=base_url or "http://localhost:8000",
             project_name=project_name,
             llm_settings=llm_settings,
+            retrieval_context=retrieval_context,
         )
         self._env = Environment(
             loader=FileSystemLoader(str(_TEMPLATE_ROOT.parent)),
@@ -185,7 +187,10 @@ class BehaveGenerator(BaseGenerator):
         # LLM-enhanced: add response body assertions instead of TODO
         enhancer = self._get_enhancer()
         if enhancer and status >= 200 and status < 300:
-            body_steps = enhancer.generate_response_assertions(route)
+            body_steps = enhancer.generate_response_assertions(
+                route,
+                retrieval_context=self.retrieval_context,
+            )
             then_steps.extend(body_steps)
         elif status >= 200 and status < 300:
             comments.append("TODO: assert response body structure")
@@ -210,7 +215,11 @@ class BehaveGenerator(BaseGenerator):
         if risk.category == RiskCategory.SECURITY:
             expected_status = 401 if route.method in {"POST", "PUT", "DELETE"} else 403
             if enhancer:
-                then_steps = enhancer.generate_step_definitions(route, risk)
+                then_steps = enhancer.generate_step_definitions(
+                    route,
+                    risk,
+                    retrieval_context=self.retrieval_context,
+                )
                 if not any(str(expected_status) in s for s in then_steps):
                     then_steps.insert(0, f"the response status should be {expected_status}")
                 comments = []
@@ -228,7 +237,11 @@ class BehaveGenerator(BaseGenerator):
             )
         if risk.category == RiskCategory.PERFORMANCE:
             if enhancer:
-                then_steps = enhancer.generate_step_definitions(route, risk)
+                then_steps = enhancer.generate_step_definitions(
+                    route,
+                    risk,
+                    retrieval_context=self.retrieval_context,
+                )
                 comments = []
             else:
                 then_steps = ["the response status should be 200"]
@@ -244,7 +257,11 @@ class BehaveGenerator(BaseGenerator):
             )
         if risk.category == RiskCategory.RELIABILITY:
             if enhancer:
-                then_steps = enhancer.generate_step_definitions(route, risk)
+                then_steps = enhancer.generate_step_definitions(
+                    route,
+                    risk,
+                    retrieval_context=self.retrieval_context,
+                )
                 comments = []
             else:
                 then_steps = []

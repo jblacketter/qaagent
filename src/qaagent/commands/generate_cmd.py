@@ -36,6 +36,25 @@ def _resolve_disabled_rules(active_profile) -> Optional[set]:
     return None
 
 
+def _resolve_risk_kwargs(active_profile, project_root: Path) -> dict:
+    """Build keyword args for assess_risks() from active profile."""
+    kwargs: dict = {}
+    if not active_profile:
+        return kwargs
+    ra = active_profile.risk_assessment
+    if ra.disable_rules:
+        kwargs["disabled_rules"] = set(ra.disable_rules)
+    if ra.custom_rules:
+        kwargs["custom_rules"] = ra.custom_rules
+    if ra.custom_rules_file:
+        resolved = active_profile.resolve_custom_rules_path(project_root)
+        if resolved:
+            kwargs["custom_rules_file"] = resolved
+    if ra.severity_overrides:
+        kwargs["severity_overrides"] = ra.severity_overrides
+    return kwargs
+
+
 def _print_generation_result(result, label: str) -> None:
     """Print a GenerationResult summary."""
     if isinstance(result, GenerationResult):
@@ -96,7 +115,7 @@ def generate_behave(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
+        risks = assess_risks(routes, **_resolve_risk_kwargs(active_profile, project_root))
 
     resolved_base_url = (
         base_url
@@ -178,7 +197,7 @@ def generate_unit_tests(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
+        risks = assess_risks(routes, **_resolve_risk_kwargs(active_profile, project_root))
 
     # Resolve base URL
     resolved_base_url = (
@@ -324,7 +343,7 @@ def generate_e2e(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
+        risks = assess_risks(routes, **_resolve_risk_kwargs(active_profile, project_root))
 
     # Resolve base URL
     resolved_base_url = (
@@ -434,7 +453,7 @@ def generate_all(
     if risks_file:
         risks = load_risks_from_file(Path(risks_file))
     else:
-        risks = assess_risks(routes, disabled_rules=_resolve_disabled_rules(active_profile))
+        risks = assess_risks(routes, **_resolve_risk_kwargs(active_profile, project_root))
 
     # Resolve base URL
     resolved_base_url = (

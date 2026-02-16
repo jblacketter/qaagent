@@ -35,6 +35,7 @@ class UnitTestGenerator(BaseGenerator):
         output_dir: Optional[Path] = None,
         project_name: str = "Application",
         llm_settings: Optional[LLMSettings] = None,
+        retrieval_context: Optional[List[str]] = None,
     ):
         super().__init__(
             routes=routes,
@@ -43,6 +44,7 @@ class UnitTestGenerator(BaseGenerator):
             base_url=base_url,
             project_name=project_name,
             llm_settings=llm_settings,
+            retrieval_context=retrieval_context,
         )
         self._setup_jinja()
         self._enhancer = None
@@ -161,7 +163,11 @@ class UnitTestGenerator(BaseGenerator):
         enhancer = self._get_enhancer()
         if enhancer:
             schema = self._extract_response_schema(route)
-            extra_assertions = enhancer.enhance_assertions(route, schema)
+            extra_assertions = enhancer.enhance_assertions(
+                route,
+                schema,
+                retrieval_context=self.retrieval_context,
+            )
 
         # Happy path test — use concrete sample path for parameterized routes
         sample_path = self._resolve_sample_path(route.path)
@@ -245,7 +251,11 @@ class UnitTestGenerator(BaseGenerator):
         """
         enhancer = self._get_enhancer()
         if enhancer:
-            cases = enhancer.generate_edge_cases(route, self.risks)
+            cases = enhancer.generate_edge_cases(
+                route,
+                self.risks,
+                retrieval_context=self.retrieval_context,
+            )
             if cases:
                 return self._normalize_edge_cases(cases)
 

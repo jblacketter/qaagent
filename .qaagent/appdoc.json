@@ -1,0 +1,539 @@
+{
+  "app_name": "X",
+  "summary": "X is an application. It exposes 0 API route(s) and integrates with HTTPX, Stripe, AWS and 14 other service(s).",
+  "generated_at": "2026-02-13T20:48:10.935891",
+  "content_hash": "c4f6f4b52746be5e",
+  "source_dir": ".",
+  "features": [],
+  "integrations": [
+    {
+      "id": "httpx",
+      "name": "HTTPX",
+      "type": "http_client",
+      "description": "HTTPX (http_client) via the httpx package.",
+      "package": "httpx",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "type": "sdk",
+      "description": "Stripe (sdk). Configured with environment variable(s): STRIPE_KEY, STRIPE_SECRET_KEY.",
+      "package": null,
+      "env_vars": [
+        "STRIPE_KEY",
+        "STRIPE_SECRET_KEY"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "aws",
+      "name": "AWS",
+      "type": "sdk",
+      "description": "AWS (sdk). Configured with environment variable(s): AWS_REGION, AWS_REGION_NAME, AWS_ROLE_ARN, AWS_WEB_IDENTITY_TOKEN_FILE, AWS_SECRET_ACCESS_KEY, AWS_ROLE_NAME, AWS_ACCESS_KEY_ID, AWS_PROFILE_NAME, AWS_WEB_IDENTITY_TOKEN, AWS_SESSION_NAME, AWS_SESSION_TOKEN, AWS_DEFAULT_REGION, AWS_S3_BUCKET_NAME, AWS_BATCH_ROLE_ARN, AWS_S3_OUTPUT_BUCKET_NAME.",
+      "package": null,
+      "env_vars": [
+        "AWS_REGION",
+        "AWS_REGION_NAME",
+        "AWS_ROLE_ARN",
+        "AWS_WEB_IDENTITY_TOKEN_FILE",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_ROLE_NAME",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_PROFILE_NAME",
+        "AWS_WEB_IDENTITY_TOKEN",
+        "AWS_SESSION_NAME",
+        "AWS_SESSION_TOKEN",
+        "AWS_DEFAULT_REGION",
+        "AWS_S3_BUCKET_NAME",
+        "AWS_BATCH_ROLE_ARN",
+        "AWS_S3_OUTPUT_BUCKET_NAME"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "redis",
+      "name": "Redis",
+      "type": "database",
+      "description": "Redis (database) via the redis package. Configured with environment variable(s): REDIS_URL, REDIS_CONNECTION_POOL_TIMEOUT, REDIS_SOCKET_TIMEOUT, REDIS_USERNAME, REDIS_HOST, REDIS_PORT, REDIS_SSL, REDIS_PASSWORD.",
+      "package": "redis",
+      "env_vars": [
+        "REDIS_URL",
+        "REDIS_CONNECTION_POOL_TIMEOUT",
+        "REDIS_SOCKET_TIMEOUT",
+        "REDIS_USERNAME",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_SSL",
+        "REDIS_PASSWORD"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "aiohttp",
+      "name": "aiohttp",
+      "type": "http_client",
+      "description": "aiohttp (http_client) via the aiohttp package.",
+      "package": "aiohttp",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "requests-http",
+      "name": "Requests HTTP",
+      "type": "http_client",
+      "description": "Requests HTTP (http_client) via the requests.models package.",
+      "package": "requests.models",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "authlib",
+      "name": "AuthLib",
+      "type": "auth_provider",
+      "description": "AuthLib (auth_provider) via the authlib.integrations.base_client.errors package.",
+      "package": "authlib.integrations.base_client.errors",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "type": "database",
+      "description": "SQLite (database) via the sqlite3 package.",
+      "package": "sqlite3",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "urllib3",
+      "name": "urllib3",
+      "type": "http_client",
+      "description": "urllib3 (http_client) via the urllib3 package.",
+      "package": "urllib3",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud",
+      "type": "sdk",
+      "description": "Google Cloud (sdk) via the google.cloud package. Configured with environment variable(s): GOOGLE_SECRET_MANAGER_REFRESH_INTERVAL, GOOGLE_SECRET_MANAGER_PROJECT_ID, GOOGLE_SECRET_MANAGER_ALWAYS_READ_SECRET_MANAGER, GOOGLE_KMS_RESOURCE_NAME, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_APPLICATION_CREDENTIALS.",
+      "package": "google.cloud",
+      "env_vars": [
+        "GOOGLE_SECRET_MANAGER_REFRESH_INTERVAL",
+        "GOOGLE_SECRET_MANAGER_PROJECT_ID",
+        "GOOGLE_SECRET_MANAGER_ALWAYS_READ_SECRET_MANAGER",
+        "GOOGLE_KMS_RESOURCE_NAME",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_APPLICATION_CREDENTIALS"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "sqlalchemy",
+      "name": "SQLAlchemy",
+      "type": "database",
+      "description": "SQLAlchemy (database) via the sqlalchemy package.",
+      "package": "sqlalchemy",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "type": "sdk",
+      "description": "Slack (sdk) via the slack_sdk package. Configured with environment variable(s): SLACK_WEBHOOK_URL, SLACK_API_CHANNEL, SLACK_API_SECRET, SLACK_API_TOKEN, SLACK_DAILY_REPORT_FREQUENCY.",
+      "package": "slack_sdk",
+      "env_vars": [
+        "SLACK_WEBHOOK_URL",
+        "SLACK_API_CHANNEL",
+        "SLACK_API_SECRET",
+        "SLACK_API_TOKEN",
+        "SLACK_DAILY_REPORT_FREQUENCY"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "aws-boto3",
+      "name": "AWS (boto3)",
+      "type": "sdk",
+      "description": "AWS (boto3) (sdk) via the boto3 package.",
+      "package": "boto3",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "google-auth",
+      "name": "Google Auth",
+      "type": "auth_provider",
+      "description": "Google Auth (auth_provider) via the google.auth package.",
+      "package": "google.auth",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "database",
+      "name": "Database",
+      "type": "database",
+      "description": "Database (database). Configured with environment variable(s): DATABASE_URL.",
+      "package": null,
+      "env_vars": [
+        "DATABASE_URL"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "aws-botocore",
+      "name": "AWS (botocore)",
+      "type": "sdk",
+      "description": "AWS (botocore) (sdk) via the botocore.auth package.",
+      "package": "botocore.auth",
+      "env_vars": [],
+      "connected_features": [],
+      "source": "auto"
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "type": "sdk",
+      "description": "Sentry (sdk) via the sentry_sdk.scrubber package. Configured with environment variable(s): SENTRY_API_SAMPLE_RATE, SENTRY_ENVIRONMENT, SENTRY_DSN, SENTRY_API_TRACE_RATE.",
+      "package": "sentry_sdk.scrubber",
+      "env_vars": [
+        "SENTRY_API_SAMPLE_RATE",
+        "SENTRY_ENVIRONMENT",
+        "SENTRY_DSN",
+        "SENTRY_API_TRACE_RATE"
+      ],
+      "connected_features": [],
+      "source": "auto"
+    }
+  ],
+  "discovered_cujs": [],
+  "architecture_nodes": [
+    {
+      "id": "int-httpx",
+      "label": "HTTPX",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "http_client",
+        "env_vars": [],
+        "package": "httpx",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 0.0
+      }
+    },
+    {
+      "id": "int-stripe",
+      "label": "Stripe",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [
+          "STRIPE_KEY",
+          "STRIPE_SECRET_KEY"
+        ],
+        "package": null,
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 120.0
+      }
+    },
+    {
+      "id": "int-aws",
+      "label": "AWS",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [
+          "AWS_REGION",
+          "AWS_REGION_NAME",
+          "AWS_ROLE_ARN",
+          "AWS_WEB_IDENTITY_TOKEN_FILE",
+          "AWS_SECRET_ACCESS_KEY",
+          "AWS_ROLE_NAME",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_PROFILE_NAME",
+          "AWS_WEB_IDENTITY_TOKEN",
+          "AWS_SESSION_NAME",
+          "AWS_SESSION_TOKEN",
+          "AWS_DEFAULT_REGION",
+          "AWS_S3_BUCKET_NAME",
+          "AWS_BATCH_ROLE_ARN",
+          "AWS_S3_OUTPUT_BUCKET_NAME"
+        ],
+        "package": null,
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 240.0
+      }
+    },
+    {
+      "id": "int-redis",
+      "label": "Redis",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "database",
+        "env_vars": [
+          "REDIS_URL",
+          "REDIS_CONNECTION_POOL_TIMEOUT",
+          "REDIS_SOCKET_TIMEOUT",
+          "REDIS_USERNAME",
+          "REDIS_HOST",
+          "REDIS_PORT",
+          "REDIS_SSL",
+          "REDIS_PASSWORD"
+        ],
+        "package": "redis",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 360.0
+      }
+    },
+    {
+      "id": "int-aiohttp",
+      "label": "aiohttp",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "http_client",
+        "env_vars": [],
+        "package": "aiohttp",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 480.0
+      }
+    },
+    {
+      "id": "int-requests-http",
+      "label": "Requests HTTP",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "http_client",
+        "env_vars": [],
+        "package": "requests.models",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 600.0
+      }
+    },
+    {
+      "id": "int-authlib",
+      "label": "AuthLib",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "auth_provider",
+        "env_vars": [],
+        "package": "authlib.integrations.base_client.errors",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 720.0
+      }
+    },
+    {
+      "id": "int-sqlite",
+      "label": "SQLite",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "database",
+        "env_vars": [],
+        "package": "sqlite3",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 840.0
+      }
+    },
+    {
+      "id": "int-urllib3",
+      "label": "urllib3",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "http_client",
+        "env_vars": [],
+        "package": "urllib3",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 960.0
+      }
+    },
+    {
+      "id": "int-google-cloud",
+      "label": "Google Cloud",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [
+          "GOOGLE_SECRET_MANAGER_REFRESH_INTERVAL",
+          "GOOGLE_SECRET_MANAGER_PROJECT_ID",
+          "GOOGLE_SECRET_MANAGER_ALWAYS_READ_SECRET_MANAGER",
+          "GOOGLE_KMS_RESOURCE_NAME",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_APPLICATION_CREDENTIALS"
+        ],
+        "package": "google.cloud",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1080.0
+      }
+    },
+    {
+      "id": "int-sqlalchemy",
+      "label": "SQLAlchemy",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "database",
+        "env_vars": [],
+        "package": "sqlalchemy",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1200.0
+      }
+    },
+    {
+      "id": "int-slack",
+      "label": "Slack",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [
+          "SLACK_WEBHOOK_URL",
+          "SLACK_API_CHANNEL",
+          "SLACK_API_SECRET",
+          "SLACK_API_TOKEN",
+          "SLACK_DAILY_REPORT_FREQUENCY"
+        ],
+        "package": "slack_sdk",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1320.0
+      }
+    },
+    {
+      "id": "int-aws-boto3",
+      "label": "AWS (boto3)",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [],
+        "package": "boto3",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1440.0
+      }
+    },
+    {
+      "id": "int-google-auth",
+      "label": "Google Auth",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "auth_provider",
+        "env_vars": [],
+        "package": "google.auth",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1560.0
+      }
+    },
+    {
+      "id": "int-database",
+      "label": "Database",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "database",
+        "env_vars": [
+          "DATABASE_URL"
+        ],
+        "package": null,
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1680.0
+      }
+    },
+    {
+      "id": "int-aws-botocore",
+      "label": "AWS (botocore)",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [],
+        "package": "botocore.auth",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1800.0
+      }
+    },
+    {
+      "id": "int-sentry",
+      "label": "Sentry",
+      "type": "integration",
+      "metadata": {
+        "integration_type": "sdk",
+        "env_vars": [
+          "SENTRY_API_SAMPLE_RATE",
+          "SENTRY_ENVIRONMENT",
+          "SENTRY_DSN",
+          "SENTRY_API_TRACE_RATE"
+        ],
+        "package": "sentry_sdk.scrubber",
+        "graph_type": "integration_map"
+      },
+      "position": {
+        "x": 500.0,
+        "y": 1920.0
+      }
+    }
+  ],
+  "architecture_edges": [],
+  "total_routes": 0,
+  "metadata": {}
+}

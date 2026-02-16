@@ -42,6 +42,7 @@ class PlaywrightGenerator(BaseGenerator):
         cujs: Optional[List[CUJ]] = None,
         auth_config: Optional[AuthSettings] = None,
         browsers: Optional[List[str]] = None,
+        retrieval_context: Optional[List[str]] = None,
     ) -> None:
         super().__init__(
             routes=routes,
@@ -50,6 +51,7 @@ class PlaywrightGenerator(BaseGenerator):
             base_url=base_url,
             project_name=project_name,
             llm_settings=llm_settings,
+            retrieval_context=retrieval_context,
         )
         self.cujs = cujs or []
         self.auth_config = auth_config
@@ -242,6 +244,12 @@ class PlaywrightGenerator(BaseGenerator):
             f"- {api.get('method', 'GET')} {api.get('path', '/')}"
             for api in cuj.apis
         ) if cuj.apis else "None specified"
+        rag_text = ""
+        if self.retrieval_context:
+            sections = []
+            for idx, snippet in enumerate(self.retrieval_context[:4], start=1):
+                sections.append(f"[Snippet {idx}]\n{snippet[:1200]}")
+            rag_text = "\n\nRepository context:\n" + "\n\n".join(sections)
 
         system = (
             "You are a QA engineer writing Playwright TypeScript E2E tests. "
@@ -256,6 +264,7 @@ class PlaywrightGenerator(BaseGenerator):
             f"APIs:\n{apis}\n"
             f"Acceptance criteria:\n{acceptance}\n\n"
             "Generate 2-4 meaningful test functions."
+            f"{rag_text}"
         )
 
         try:

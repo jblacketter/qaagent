@@ -3,7 +3,7 @@ from __future__ import annotations
 import textwrap
 from collections import defaultdict
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Set
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
 
 from .models import Risk, RiskCategory, RiskSeverity, Route, SEVERITY_SCORES
 from .rules import default_registry
@@ -12,17 +12,28 @@ from .rules import default_registry
 def assess_risks(
     routes: Sequence[Route],
     disabled_rules: Optional[Set[str]] = None,
+    *,
+    custom_rules: Optional[List[Dict[str, Any]]] = None,
+    custom_rules_file: Optional[Path] = None,
+    severity_overrides: Optional[Dict[str, str]] = None,
 ) -> List[Risk]:
     """Assess risks using the pluggable rule registry.
 
     Args:
         routes: Routes to evaluate.
         disabled_rules: Set of rule IDs to skip.
+        custom_rules: Inline custom rule dicts from config.
+        custom_rules_file: Path to a custom rules YAML file.
+        severity_overrides: Map of rule_id -> severity for post-eval remapping.
 
     Returns:
         Risks sorted by severity (highest first).
     """
-    registry = default_registry()
+    registry = default_registry(
+        custom_rules=custom_rules,
+        custom_rules_file=custom_rules_file,
+        severity_overrides=severity_overrides,
+    )
     risks = registry.run_all(list(routes), disabled=disabled_rules)
 
     # Prioritise by severity, then by heuristics (admin routes higher priority)

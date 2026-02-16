@@ -7,6 +7,7 @@
     "api-detect",
     "config",
     "dashboard",
+    "doc",
     "doctor",
     "export-reports",
     "fix",
@@ -15,6 +16,7 @@
     "init",
     "lighthouse-audit",
     "mcp-stdio",
+    "notify",
     "open-report",
     "perf-run",
     "perf-scaffold",
@@ -22,7 +24,10 @@
     "playwright-install",
     "playwright-scaffold",
     "pytest-run",
+    "rag",
+    "record",
     "report",
+    "rules",
     "run-all",
     "schemathesis-run",
     "summarize",
@@ -36,6 +41,8 @@
   "subgroups": {
     "analyze": [
       "collectors",
+      "coverage-gaps",
+      "dom",
       "recommendations",
       "repo",
       "risks",
@@ -62,6 +69,21 @@
       "openapi",
       "test-data",
       "unit-tests"
+    ],
+    "doc": [
+      "cujs",
+      "export",
+      "generate",
+      "show"
+    ],
+    "rules": [
+      "list",
+      "show",
+      "validate"
+    ],
+    "rag": [
+      "index",
+      "query"
     ],
     "workspace": [
       "apply",
