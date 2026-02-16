@@ -16,7 +16,7 @@ export function RepositorySetupPage() {
     security: true,
     performance: true,
     codeQuality: true,
-    testCases: false, // v2.0 feature
+    testCases: true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,10 +187,9 @@ export function RepositorySetupPage() {
                   id="testCases"
                   checked={options.testCases}
                   onChange={() => toggleOption("testCases")}
-                  label="Test Cases (Coming in v2.0)"
-                  description="Generate test case recommendations"
-                  disabled={true}
-                  comingSoon
+                  label="Test Case Generation"
+                  description="Generate unit tests, BDD features, and E2E tests from discovered routes"
+                  disabled={isAnalyzing}
                 />
               </div>
             </div>

@@ -40,6 +40,14 @@ dashboard_dist = Path(__file__).parent / "dashboard" / "frontend" / "dist"
 if dashboard_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
 
+# Mount API routers used by the React dashboard
+from qaagent.api.routes import runs, evidence, repositories, fix, doc
+app.include_router(repositories.router, prefix="/api")
+app.include_router(runs.router, prefix="/api")
+app.include_router(evidence.router, prefix="/api")
+app.include_router(fix.router, prefix="/api")
+app.include_router(doc.router, prefix="/api")
+
 
 class TargetInput(BaseModel):
     name: str
@@ -59,12 +67,12 @@ async def home():
     dashboard_index = Path(__file__).parent / "dashboard" / "frontend" / "dist" / "index.html"
     if dashboard_index.exists():
         return FileResponse(dashboard_index)
-
-    # Fallback to old template if React build doesn't exist
-    html_path = Path(__file__).parent / "templates" / "web_ui.html"
-    if html_path.exists():
-        return html_path.read_text()
-    return "<h1>QA Agent Web UI</h1><p>UI template not found. Run 'npm run build' in src/qaagent/dashboard/frontend/</p>"
+    return HTMLResponse(
+        "<h1>QA Agent Web UI</h1>"
+        "<p>React dashboard not built. Run <code>npm run build</code> "
+        "in <code>src/qaagent/dashboard/frontend/</code></p>",
+        status_code=500,
+    )
 
 
 @app.get("/api/targets")

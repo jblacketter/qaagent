@@ -20,7 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp"]
-api = ["schemathesis", "httpx>=0.27", "PyYAML>=6.0"]
+api = ["schemathesis", "httpx>=0.27", "PyYAML>=6.0", "fastapi>=0.111", "uvicorn>=0.29"]
 ui = [
     "playwright",
     "pytest-playwright>=0.5",

@@ -62,19 +62,28 @@ def create_repository(repo: RepositoryCreate) -> Repository:
     if repo_id in repositories:
         raise HTTPException(status_code=400, detail=f"Repository '{repo.name}' already exists")
 
-    # Validate path exists for local repositories
+    # Validate or clone
+    resolved_path = repo.path
     if repo.repo_type == "local":
         repo_path = Path(repo.path)
         if not repo_path.exists():
             raise HTTPException(status_code=400, detail=f"Path does not exist: {repo.path}")
         if not repo_path.is_dir():
             raise HTTPException(status_code=400, detail=f"Path is not a directory: {repo.path}")
+    elif repo.repo_type == "github":
+        try:
+            from qaagent.repo.cloner import RepoCloner
+            cloner = RepoCloner()
+            local_path = cloner.clone(repo.path)
+            resolved_path = str(local_path)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to clone repository: {e}")
 
     # Create repository entry
     new_repo = Repository(
         id=repo_id,
         name=repo.name,
-        path=repo.path,
+        path=resolved_path,
         repo_type=repo.repo_type,
         analysis_options=repo.analysis_options,
     )
@@ -116,14 +125,37 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
         # Change to repository directory
         repo_path = Path(repo.path)
 
+        # Register as active target so CLI commands can find it
+        from qaagent.config.manager import TargetManager
+        manager = TargetManager()
+        try:
+            manager.add_target(repo.name, str(repo_path))
+        except ValueError:
+            pass  # Already registered
+        manager.set_active(repo.name)
+
         # Run qaagent analyze commands based on options
         commands = []
+
+        # Always discover routes first — needed by risks and test generation
+        routes_file = repo_path / "routes.json"
+        commands.append([
+            "qaagent", "analyze", "routes",
+            "--source", ".",
+            "--out", str(routes_file),
+        ])
 
         if repo.analysis_options.get("testCoverage") or repo.analysis_options.get("codeQuality"):
             commands.append(["qaagent", "analyze", "collectors"])
 
         if repo.analysis_options.get("security") or repo.analysis_options.get("performance"):
             commands.append(["qaagent", "analyze", "risks"])
+
+        if repo.analysis_options.get("testCases"):
+            commands.append([
+                "qaagent", "generate", "unit-tests",
+                "--routes-file", str(routes_file),
+            ])
 
         # Execute commands
         for cmd in commands:
@@ -137,9 +169,11 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
 
             if result.returncode != 0:
                 repo.status = "error"
+                error_output = (result.stderr or result.stdout or "unknown error").strip()
+                cmd_name = " ".join(cmd[:3])
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Analysis failed: {result.stderr}"
+                    detail=f"'{cmd_name}' failed (exit {result.returncode}): {error_output}"
                 )
 
         # Update repository metadata
@@ -156,6 +190,8 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
     except subprocess.TimeoutExpired:
         repo.status = "error"
         raise HTTPException(status_code=500, detail="Analysis timed out after 15 minutes")
+    except HTTPException:
+        raise  # Don't double-wrap
     except Exception as e:
         repo.status = "error"
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")

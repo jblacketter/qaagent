@@ -49,7 +49,11 @@ async def _initialize(proc: asyncio.subprocess.Process) -> Dict[str, Any]:
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
-            "params": {"protocolVersion": "1.0"},
+            "params": {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "0.1.0"},
+            },
         },
     )
     return await _read_message(proc)
