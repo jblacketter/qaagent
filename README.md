@@ -2,6 +2,8 @@
 
 A Python QA automation framework that discovers API routes, assesses risks, generates runnable test suites, orchestrates test execution, and produces reports. Exposes tooling via CLI (Typer) and MCP (Model Context Protocol). Local-first, works on macOS (including Apple Silicon) and Windows.
 
+![QA Agent Dashboard](docs/qaagent.png)
+
 ## Features
 
 - **Route Discovery** - Extract API routes from OpenAPI specs, source code (FastAPI, Flask, Django, Next.js), or live UI crawling
