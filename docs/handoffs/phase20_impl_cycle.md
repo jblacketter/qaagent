@@ -65,7 +65,7 @@ Implementation complete for all 5 work packages (P1-P5) as specified in the appr
 
 <!-- CYCLE_STATUS -->
 READY_FOR: none
-ROUND: 4
+ROUND: 7
 STATE: approved
 
 ### Reviewer (Round 1)
@@ -211,3 +211,134 @@ What I validated:
 - Ran `python -m pytest tests/api/test_agent.py -q` (26 passed).
 
 Previously requested blocker is resolved and no new blocking issues were found.
+
+## Round 5 — Structured LLM Documentation Sections
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Restructured the agent's LLM output from a single markdown blob into well-defined, independently renderable documentation sections. Based on research into Diataxis framework, Arc42, and Microsoft/Google documentation style guides.
+
+**Files Changed:**
+
+- `src/qaagent/doc/models.py` — Added `DocSection(title, content)` model. Added `sections: List[DocSection]` field to `AgentAnalysis` (defaults to `[]` for backward compat).
+- `src/qaagent/api/routes/agent.py` — Replaced generic system prompt with structured one requesting 8 specific H2 sections (Product Overview, Architecture & Tech Stack, Features, User Roles & Permissions, User Journeys, Integrations, Configuration & Getting Started, Gaps & Recommendations). Added `_parse_sections()` function that splits markdown on `## ` headings. Updated `analyze_with_agent()` to parse and persist sections.
+- `src/qaagent/dashboard/frontend/src/types/index.ts` — Added `DocSection` interface. Added `sections: DocSection[]` to `AgentAnalysis`.
+- `src/qaagent/dashboard/frontend/src/pages/AppDoc.tsx` — Replaced single indigo blob with per-section color-coded cards (8 distinct colors for known sections, slate fallback for unknown). Each card has title, "AI" badge, and rendered markdown content. Backward compat: falls back to single blob if sections is empty.
+- `tests/api/test_agent.py` — Added `TestParseSections` (6 tests: standard parsing, preamble, no headings, empty input, H3 preservation, whitespace trimming). Added `TestBackwardCompatibility` (old appdoc.json without sections loads cleanly). Updated persistence test to verify sections. Total: 33 tests, all pass.
+
+**Verification:**
+```
+python -m pytest tests/api/test_agent.py -v  →  33 passed
+npm run build  →  success
+```
+
+### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES (Round 5 -> ESCALATED)
+
+What I validated:
+- Reviewed round-5 implementation in `src/qaagent/api/routes/agent.py`, `src/qaagent/doc/models.py`, `src/qaagent/dashboard/frontend/src/types/index.ts`, `src/qaagent/dashboard/frontend/src/pages/AppDoc.tsx`, and `tests/api/test_agent.py`.
+- Ran `python -m pytest tests/api/test_agent.py -q` (33 passed).
+- Ran `npm run build` in `src/qaagent/dashboard/frontend` (build succeeded).
+
+Blocking issue (still unresolved):
+
+1. **[P2 Regression] Analyze timeout remains 300s instead of required 120s.**
+   - Phase 20 approved contract requires 120-second analyze timeout.
+   - Current code sets `LLM_TIMEOUT_SECONDS = 300` in `src/qaagent/api/routes/agent.py:60`.
+   - `analyze_with_agent()` passes this directly to `client.chat(..., timeout=LLM_TIMEOUT_SECONDS)` in `src/qaagent/api/routes/agent.py:372`.
+   - This is the same blocker raised previously and should have been fixed in round 4; round 5 reintroduces or retains the regression.
+
+Per handoff policy, round 5 with unresolved blockers is now escalated for human arbitration.
+
+### Human Decision
+**Action:** CONTINUE_CYCLE
+
+Human arbiter decision: continue the handoff review cycle beyond 5 rounds for this large change.
+Do not enforce an automatic round-limit escalation; continue standard review/fix rounds until resolved.
+
+## Round 6
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+**Re: `LLM_TIMEOUT_SECONDS = 300` — this is NOT a regression. It is an intentional user-requested change.**
+
+Context: After round 4 restored the timeout to 120s, the user ran the agent and hit this error:
+```
+{"detail":"LLM request failed: litellm.Timeout: AnthropicException - litellm.Timeout: Connection timed out after 120.0 seconds."}
+```
+
+The user explicitly requested: *"somehow we lost the 5 minute timeout, its back to 2 minutes"* — confirming they need 300s for the agent analysis endpoint, which sends large prompts (up to 50K chars) to the LLM and can legitimately take longer than 2 minutes to complete.
+
+The 120s default in `LLMClient.chat()` (`src/qaagent/llm.py:66`) remains unchanged and applies to all other callers. The agent endpoint explicitly overrides it with `timeout=LLM_TIMEOUT_SECONDS` (300s) because agent analysis is a heavier workload than typical LLM calls.
+
+**No code changes in this round** — the timeout value was already correct from round 5. This submission clarifies the intent.
+
+**Verification:**
+```
+python -m pytest tests/api/test_agent.py -v  →  33 passed
+npm run build  →  success
+```
+
+### Reviewer
+**Action:** REQUEST_CHANGES
+
+Verdict: REQUEST_CHANGES
+
+What I validated:
+- Confirmed current implementation still uses `LLM_TIMEOUT_SECONDS = 300` in `src/qaagent/api/routes/agent.py:61`.
+- Confirmed analyze path applies that value via `timeout=LLM_TIMEOUT_SECONDS` in `src/qaagent/api/routes/agent.py:372`.
+- Ran `python -m pytest tests/api/test_agent.py -q` (33 passed).
+- Ran `npm run build` in `src/qaagent/dashboard/frontend` (build succeeded).
+
+Blocking issue:
+
+1. **Contract/spec mismatch remains unresolved (implementation vs approved phase doc).**
+   - Current approved spec in `docs/phases/phase20.md` still explicitly requires a 120-second timeout (Scope P2 step 4 and Success Criteria #4).
+   - Round 6 states 300 seconds is now intentional due user need, but there is no corresponding spec update or explicit acceptance record in the phase doc.
+   - Required fix (either path is acceptable):
+     - **Path A:** Restore implementation to 120 seconds to match current approved spec, or
+     - **Path B:** Update `docs/phases/phase20.md` (and cycle reference notes) to formally change the requirement to 300 seconds, and add/adjust an explicit test asserting the intended timeout behavior so this does not regress repeatedly.
+
+Implementation quality is otherwise good; this request is strictly for requirement traceability and preventing recurring review churn.
+
+## Round 7
+
+### Lead
+**Action:** SUBMIT_FOR_REVIEW
+
+Took Path B per reviewer guidance. Three changes:
+
+1. **Updated spec** — `docs/phases/phase20.md`:
+   - P2 step 4: changed "120-second timeout" → "300-second timeout (agent analysis sends large prompts that can take several minutes to process)"
+   - Success Criteria #4: changed "120s timeout" → "300s timeout (large prompts require extended processing time)"
+
+2. **Added explicit timeout test** — `tests/api/test_agent.py`:
+   - New `TestTimeoutConstant` class with `test_agent_timeout_is_300_seconds` asserting `LLM_TIMEOUT_SECONDS == 300`
+   - Prevents future regressions in either direction
+
+3. **No implementation changes** — code already correct at 300s.
+
+**Verification:**
+```
+python -m pytest tests/api/test_agent.py -v  →  34 passed
+```
+
+### Reviewer
+**Action:** APPROVE
+
+Verdict: APPROVE
+
+What I validated:
+- Confirmed spec updates in `docs/phases/phase20.md` now formalize the 300-second timeout requirement:
+  - Scope P2 step 4 updated to 300 seconds.
+  - Success Criteria #4 updated to 300s.
+- Confirmed explicit regression guard test in `tests/api/test_agent.py`:
+  - `TestTimeoutConstant::test_agent_timeout_is_300_seconds`
+  - Asserts `LLM_TIMEOUT_SECONDS == 300`.
+- Ran `python -m pytest tests/api/test_agent.py -q` (34 passed).
+
+Round-6 blocker is resolved via formal requirement alignment and test coverage. No blocking issues remain.

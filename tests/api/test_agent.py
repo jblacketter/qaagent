@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from qaagent.api.routes.repositories import Repository, repositories
-from qaagent.api.routes.agent import _configs, _usage, _AgentConfig, _UsageAccumulator, _mask_key, _estimate_cost
+from qaagent.api.routes.agent import _configs, _usage, _AgentConfig, _UsageAccumulator, _mask_key, _estimate_cost, _parse_sections, LLM_TIMEOUT_SECONDS
 from qaagent.doc.generator import save_documentation
 from qaagent.doc.models import AppDocumentation
 
@@ -89,6 +89,67 @@ class TestEstimateCost:
     def test_prefix_match(self):
         cost = _estimate_cost("claude-sonnet-4-5", 1_000_000, 0)
         assert cost == 3.0
+
+
+class TestTimeoutConstant:
+    def test_agent_timeout_is_300_seconds(self):
+        """Agent analysis timeout is 300s (large prompts need extended processing)."""
+        assert LLM_TIMEOUT_SECONDS == 300
+
+
+class TestParseSections:
+    def test_parses_standard_sections(self):
+        """Standard LLM output with ## headings is split into sections."""
+        md = (
+            "## Product Overview\n\nThis is an app.\n\n"
+            "## Features\n\n### Login\n\nUsers can log in.\n\n"
+            "## Gaps & Recommendations\n\nNeed more tests."
+        )
+        sections = _parse_sections(md)
+        assert len(sections) == 3
+        assert sections[0].title == "Product Overview"
+        assert "This is an app" in sections[0].content
+        assert sections[1].title == "Features"
+        assert "### Login" in sections[1].content
+        assert sections[2].title == "Gaps & Recommendations"
+
+    def test_preamble_captured_as_introduction(self):
+        """Text before the first ## heading becomes an 'Introduction' section."""
+        md = "Some intro text.\n\n## Product Overview\n\nOverview content."
+        sections = _parse_sections(md)
+        assert len(sections) == 2
+        assert sections[0].title == "Introduction"
+        assert "Some intro text" in sections[0].content
+        assert sections[1].title == "Product Overview"
+
+    def test_no_headings_returns_single_section(self):
+        """If LLM ignores the format, all text goes into one section."""
+        md = "Just a big wall of text with no headings at all."
+        sections = _parse_sections(md)
+        assert len(sections) == 1
+        assert sections[0].title == "Introduction"
+        assert "big wall of text" in sections[0].content
+
+    def test_empty_string_returns_empty_list(self):
+        """Empty input produces no sections."""
+        assert _parse_sections("") == []
+        assert _parse_sections("   ") == []
+
+    def test_h3_not_split(self):
+        """### headings inside a section are NOT treated as section boundaries."""
+        md = "## Features\n\n### Login\n\nLogin flow.\n\n### Signup\n\nSignup flow."
+        sections = _parse_sections(md)
+        assert len(sections) == 1
+        assert sections[0].title == "Features"
+        assert "### Login" in sections[0].content
+        assert "### Signup" in sections[0].content
+
+    def test_strips_whitespace_from_title_and_content(self):
+        """Titles and content are trimmed."""
+        md = "##   Architecture & Tech Stack  \n\n  Content here.  \n\n"
+        sections = _parse_sections(md)
+        assert sections[0].title == "Architecture & Tech Stack"
+        assert sections[0].content == "Content here."
 
 
 # ---------------------------------------------------------------------------
@@ -326,13 +387,16 @@ class TestUsageEndpoints:
 
 class TestAgentAnalysisPersistence:
     def test_analyze_auto_saves_agent_analysis(self, client: TestClient, sample_repo: Repository, tmp_path: Path):
-        """POST /api/agent/analyze auto-saves agent_analysis into appdoc.json."""
+        """POST /api/agent/analyze auto-saves agent_analysis with sections into appdoc.json."""
         _configs["test-repo"] = _AgentConfig(
             provider="anthropic", model="claude-sonnet-4-5-20250929", api_key="sk-test1234abcd5678"
         )
 
         mock_response = MagicMock()
-        mock_response.content = "# AI Enhanced\n\nPersisted content."
+        mock_response.content = (
+            "## Product Overview\n\nThis is the app.\n\n"
+            "## Gaps & Recommendations\n\nNeed more docs."
+        )
         mock_response.model = "claude-sonnet-4-5-20250929"
         mock_response.usage = {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
 
@@ -347,9 +411,13 @@ class TestAgentAnalysisPersistence:
         doc = load_documentation(tmp_path)
         assert doc is not None
         assert doc.agent_analysis is not None
-        assert doc.agent_analysis.enhanced_markdown == "# AI Enhanced\n\nPersisted content."
+        assert "## Product Overview" in doc.agent_analysis.enhanced_markdown
         assert doc.agent_analysis.model_used == "claude-sonnet-4-5-20250929"
         assert doc.agent_analysis.generated_at != ""
+        # Verify sections were parsed and persisted
+        assert len(doc.agent_analysis.sections) == 2
+        assert doc.agent_analysis.sections[0].title == "Product Overview"
+        assert doc.agent_analysis.sections[1].title == "Gaps & Recommendations"
 
     def test_app_doc_get_includes_agent_analysis(self, client: TestClient, sample_repo: Repository, tmp_path: Path):
         """GET /api/doc returns agent_analysis after it has been saved."""
@@ -418,3 +486,37 @@ class TestEnvVarFallback:
         assert data["configured"] is True
         assert data["provider"] == "openai"
         assert data["model"] == "gpt-4o"
+
+
+# ---------------------------------------------------------------------------
+# Backward compatibility
+# ---------------------------------------------------------------------------
+
+
+class TestBackwardCompatibility:
+    def test_old_appdoc_without_sections_loads_cleanly(self, tmp_path: Path):
+        """An appdoc.json with agent_analysis but no 'sections' field still loads."""
+        import json
+        qaagent_dir = tmp_path / ".qaagent"
+        qaagent_dir.mkdir()
+        old_data = {
+            "app_name": "legacy",
+            "generated_at": "2026-01-01T00:00:00",
+            "content_hash": "abc",
+            "features": [],
+            "integrations": [],
+            "total_routes": 0,
+            "agent_analysis": {
+                "enhanced_markdown": "# Old format\n\nNo sections.",
+                "model_used": "old-model",
+                "generated_at": "2026-01-01T00:00:00",
+            },
+        }
+        (qaagent_dir / "appdoc.json").write_text(json.dumps(old_data), encoding="utf-8")
+
+        from qaagent.doc.generator import load_documentation
+        doc = load_documentation(tmp_path)
+        assert doc is not None
+        assert doc.agent_analysis is not None
+        assert doc.agent_analysis.enhanced_markdown == "# Old format\n\nNo sections."
+        assert doc.agent_analysis.sections == []  # Default empty list

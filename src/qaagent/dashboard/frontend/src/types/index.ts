@@ -222,8 +222,14 @@ export interface UserJourney {
   priority: "high" | "medium" | "low";
 }
 
+export interface DocSection {
+  title: string;
+  content: string;
+}
+
 export interface AgentAnalysis {
   enhanced_markdown: string;
+  sections: DocSection[];
   model_used: string;
   generated_at: string;
 }

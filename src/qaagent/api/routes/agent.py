@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -57,7 +58,7 @@ _PRICE_TABLE: Dict[str, tuple[float, float]] = {
 }
 
 PROMPT_CHAR_LIMIT = 50_000
-LLM_TIMEOUT_SECONDS = 120
+LLM_TIMEOUT_SECONDS = 300
 
 
 def _mask_key(key: str) -> str:
@@ -243,6 +244,45 @@ def _build_prompt(doc_data: dict) -> str:
     return prompt
 
 
+def _parse_sections(markdown: str) -> list:
+    """Parse LLM markdown into sections by splitting on ## headings.
+
+    Resilient: if there are no ## headings, returns a single section
+    with title "Documentation" containing the full text.
+    """
+    from qaagent.doc.models import DocSection
+
+    if not markdown.strip():
+        return []
+
+    # Split on lines that start with exactly two # (not ### or deeper)
+    parts = re.split(r"^(## .+)$", markdown, flags=re.MULTILINE)
+
+    sections: list[DocSection] = []
+
+    # Handle preamble (text before any ## heading)
+    preamble = parts[0].strip()
+    if preamble:
+        sections.append(DocSection(title="Introduction", content=preamble))
+
+    # Pair up headings with their content
+    i = 1
+    while i < len(parts) - 1:
+        heading_line = parts[i]
+        content = parts[i + 1]
+        title = heading_line.lstrip("#").strip()
+        body = content.strip()
+        if title:
+            sections.append(DocSection(title=title, content=body))
+        i += 2
+
+    # Fallback: if no sections were parsed, wrap the entire text
+    if not sections and markdown.strip():
+        sections.append(DocSection(title="Documentation", content=markdown.strip()))
+
+    return sections
+
+
 @router.post("/agent/analyze")
 def analyze_with_agent(
     repo_id: Optional[str] = Query(None),
@@ -279,13 +319,35 @@ def analyze_with_agent(
 
     system_prompt = (
         "You are a senior product documentation writer. Based on the project analysis data provided, "
-        "produce enhanced product documentation in Markdown format. Include:\n"
-        "1. A detailed application overview (2-3 paragraphs)\n"
-        "2. Refined feature descriptions written for end users\n"
-        "3. User journey narratives (step-by-step walkthroughs)\n"
-        "4. Role-based access description (who can do what)\n"
-        "5. Suggestions for missing documentation or areas that need more detail\n\n"
-        "Write in a clear, professional tone suitable for product documentation."
+        "produce enhanced product documentation in Markdown format.\n\n"
+        "Structure your output using EXACTLY these H2 section headings, in this order:\n\n"
+        "## Product Overview\n"
+        "What the application is, who it is for, and what problems it solves. Write 2-3 paragraphs.\n\n"
+        "## Architecture & Tech Stack\n"
+        "High-level system structure, key technologies, and how components relate.\n\n"
+        "## Features\n"
+        "Each feature as a subsection (### Feature Name) with a concise description, key capabilities, "
+        "and user-facing behavior. Focus on what users can do, not implementation details.\n\n"
+        "## User Roles & Permissions\n"
+        "A Markdown table with columns: Role | Description | Key Permissions. "
+        "One row per role.\n\n"
+        "## User Journeys\n"
+        "Step-by-step workflows. Use ### for each journey name, then a numbered list of steps. "
+        "Include the actor (role) performing each journey.\n\n"
+        "## Integrations\n"
+        "External services and how they connect. Use a table or bullet list with: "
+        "Name | Type | Purpose.\n\n"
+        "## Configuration & Getting Started\n"
+        "Setup guidance, environment variables needed, and first-run instructions.\n\n"
+        "## Gaps & Recommendations\n"
+        "What documentation is missing, what areas need more detail, and actionable suggestions.\n\n"
+        "Formatting rules:\n"
+        "- Use short, descriptive headings\n"
+        "- Keep paragraphs to 3-7 lines\n"
+        "- Use Markdown tables for structured data (roles, integrations)\n"
+        "- Use numbered or bulleted lists when there are 3+ items\n"
+        "- Maintain strict H2 -> H3 heading hierarchy (never skip to H4)\n"
+        "- Write in clear, professional tone suitable for product documentation"
     )
 
     # Call LLM
@@ -317,9 +379,11 @@ def analyze_with_agent(
     # Accumulate usage
     _usage[rid].add(response.usage)
 
-    # Auto-save agent analysis to appdoc.json
+    # Parse sections and auto-save agent analysis to appdoc.json
+    sections = _parse_sections(response.content)
     doc.agent_analysis = AgentAnalysis(
         enhanced_markdown=response.content,
+        sections=sections,
         model_used=response.model or cfg.model,
         generated_at=datetime.now().isoformat(),
     )

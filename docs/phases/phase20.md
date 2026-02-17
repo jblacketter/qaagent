@@ -22,7 +22,7 @@ Add a "Talk to an Agent" feature that allows users to send their project's docum
   1. **Repo context:** `repo_id` is required. If missing → 400. If not found → 404. No silent fallback. Loads `AppDocumentation` from the repo's `.qaagent/appdoc.json`.
   2. **Bounded prompt construction:** Collect project data (features, integrations, CUJs, user roles, journeys, tech stack). Serialize to structured text. **Cap prompt at 50,000 characters** (truncate feature details if needed, keeping summary + high-level structure). This prevents runaway token costs.
   3. Build a system prompt asking the LLM to produce: detailed app overview, refined feature descriptions, user journey narratives, role-based access description, and suggestions for missing documentation.
-  4. Call LLM via `LLMClient` with user-provided API key override and a **120-second timeout**.
+  4. Call LLM via `LLMClient` with user-provided API key override and a **300-second timeout** (agent analysis sends large prompts that can take several minutes to process).
   5. Return: `{ content: string, usage: { prompt_tokens, completion_tokens, total_tokens }, model: string }`.
 - **File:** `src/qaagent/llm.py`
   - Add `api_key` parameter to `LLMClient.__init__()` and pass it to `litellm.completion()` via the `api_key` kwarg (litellm supports this natively). Do NOT set environment variables.
@@ -75,7 +75,7 @@ Add a "Talk to an Agent" feature that allows users to send their project's docum
 1. User can configure an API token via the UI and it persists in memory for the process lifetime.
 2. API key is NEVER written to disk, logs, or returned in full (masked display only).
 3. "Talk to an Agent" sends repo-scoped project data to the configured LLM and returns enhanced documentation.
-4. Prompt is bounded (50k char cap) and requests have a 120s timeout.
+4. Prompt is bounded (50k char cap) and requests have a 300s timeout (large prompts require extended processing time).
 5. Token usage widget displays accurate per-repo token counts and cost estimate.
 6. Usage accumulates correctly across multiple requests and resets per repo.
 7. Missing/invalid repo_id returns appropriate HTTP errors (400/404).

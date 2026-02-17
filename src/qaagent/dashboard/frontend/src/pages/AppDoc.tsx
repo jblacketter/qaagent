@@ -140,10 +140,10 @@ export function AppDocPage() {
             </section>
           )}
 
-          {/* AI-Enhanced Documentation */}
+          {/* AI-Enhanced Documentation — section cards */}
           {doc.agent_analysis && (
-            <section className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-6 dark:border-indigo-800 dark:bg-indigo-950/30">
-              <div className="mb-3 flex items-center justify-between">
+            <>
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   AI-Enhanced Documentation
                 </h2>
@@ -153,10 +153,39 @@ export function AppDocPage() {
                     new Date(doc.agent_analysis.generated_at).toLocaleString()}
                 </span>
               </div>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <Markdown>{doc.agent_analysis.enhanced_markdown}</Markdown>
-              </div>
-            </section>
+
+              {doc.agent_analysis.sections && doc.agent_analysis.sections.length > 0 ? (
+                <div className="space-y-4">
+                  {doc.agent_analysis.sections.map((section, idx) => {
+                    const colors = sectionColors[section.title] ?? defaultSectionColor;
+                    return (
+                      <section
+                        key={idx}
+                        className={`rounded-lg border ${colors.border} ${colors.bg} p-6`}
+                      >
+                        <div className="mb-3 flex items-center gap-2">
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                            {section.title}
+                          </h3>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors.badge}`}>
+                            AI
+                          </span>
+                        </div>
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <Markdown>{section.content}</Markdown>
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : (
+                <section className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-6 dark:border-indigo-800 dark:bg-indigo-950/30">
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <Markdown>{doc.agent_analysis.enhanced_markdown}</Markdown>
+                  </div>
+                </section>
+              )}
+            </>
           )}
 
           {/* Tech Stack */}
@@ -280,6 +309,18 @@ export function AppDocPage() {
   );
 }
 
+
+const sectionColors: Record<string, { border: string; bg: string; badge: string }> = {
+  "Product Overview": { border: "border-indigo-200 dark:border-indigo-800", bg: "bg-indigo-50/30 dark:bg-indigo-950/20", badge: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" },
+  "Architecture & Tech Stack": { border: "border-blue-200 dark:border-blue-800", bg: "bg-blue-50/30 dark:bg-blue-950/20", badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  "Features": { border: "border-emerald-200 dark:border-emerald-800", bg: "bg-emerald-50/30 dark:bg-emerald-950/20", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" },
+  "User Roles & Permissions": { border: "border-purple-200 dark:border-purple-800", bg: "bg-purple-50/30 dark:bg-purple-950/20", badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  "User Journeys": { border: "border-amber-200 dark:border-amber-800", bg: "bg-amber-50/30 dark:bg-amber-950/20", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  "Integrations": { border: "border-cyan-200 dark:border-cyan-800", bg: "bg-cyan-50/30 dark:bg-cyan-950/20", badge: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
+  "Configuration & Getting Started": { border: "border-teal-200 dark:border-teal-800", bg: "bg-teal-50/30 dark:bg-teal-950/20", badge: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300" },
+  "Gaps & Recommendations": { border: "border-rose-200 dark:border-rose-800", bg: "bg-rose-50/30 dark:bg-rose-950/20", badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" },
+};
+const defaultSectionColor = { border: "border-slate-200 dark:border-slate-800", bg: "bg-slate-50/30 dark:bg-slate-950/20", badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" };
 
 const priorityColors = {
   high: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",

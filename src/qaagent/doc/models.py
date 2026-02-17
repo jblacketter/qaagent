@@ -141,10 +141,18 @@ class ArchitectureEdge(BaseModel):
     type: str = "default"  # "default", "shared_integration", "parent_child"
 
 
+class DocSection(BaseModel):
+    """A single named section of LLM-generated documentation."""
+
+    title: str
+    content: str
+
+
 class AgentAnalysis(BaseModel):
     """LLM-enhanced documentation persisted alongside app docs."""
 
     enhanced_markdown: str
+    sections: List[DocSection] = Field(default_factory=list)
     model_used: str = ""
     generated_at: str = ""
 
