@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { clsx } from "clsx";
 import {
   Home,
@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Target,
   BookOpen,
+  Bot,
 } from "lucide-react";
 
 const mainLinks = [
@@ -26,6 +27,7 @@ const repoLinks = [
   { to: "/cuj", label: "CUJ Coverage", icon: Target },
   { to: "/trends", label: "Trends", icon: TrendingUp },
   { to: "/doc", label: "App Docs", icon: BookOpen },
+  { to: "/agent", label: "Agent", icon: Bot },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -36,14 +38,18 @@ interface SidebarProps {
 
 export function Sidebar({ variant = "desktop", onLinkClick }: SidebarProps = {}) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const containerClass =
     variant === "desktop"
       ? "hidden h-full w-56 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:flex md:flex-col"
       : "flex h-full w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900";
 
   // Determine if we're on a repository-specific page
-  const repoPages = ["/dashboard", "/runs", "/risks", "/cuj", "/trends", "/doc", "/settings"];
+  const repoPages = ["/dashboard", "/runs", "/risks", "/cuj", "/trends", "/doc", "/agent", "/settings"];
   const isRepoPage = repoPages.some(page => location.pathname.startsWith(page));
+
+  // Extract repo context from current URL for doc links
+  const repoId = searchParams.get("repo");
 
   const linksToShow = isRepoPage ? repoLinks : mainLinks;
 
@@ -60,25 +66,32 @@ export function Sidebar({ variant = "desktop", onLinkClick }: SidebarProps = {})
             </NavLink>
           </div>
         )}
-        {linksToShow.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            onClick={onLinkClick}
-            className={({ isActive }) =>
-              clsx(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
-                isActive
-                  ? "bg-slate-900 text-slate-100 dark:bg-slate-100 dark:text-slate-900"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              )
-            }
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </NavLink>
-        ))}
+        {linksToShow.map(({ to, label, icon: Icon }) => {
+          // Append ?repo= to doc and agent links
+          const linkTo = (to.startsWith("/doc") || to === "/agent") && repoId
+            ? `${to}?repo=${encodeURIComponent(repoId)}`
+            : to;
+
+          return (
+            <NavLink
+              key={to}
+              to={linkTo}
+              end={to === "/"}
+              onClick={onLinkClick}
+              className={({ isActive }) =>
+                clsx(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                  isActive
+                    ? "bg-slate-900 text-slate-100 dark:bg-slate-100 dark:text-slate-900"
+                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                )
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </NavLink>
+          );
+        })}
       </nav>
     </aside>
   );

@@ -176,15 +176,46 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
                     detail=f"'{cmd_name}' failed (exit {result.returncode}): {error_output}"
                 )
 
+        # Generate documentation (always runs — core output)
+        doc_warning = None
+        try:
+            import json as _json
+            from qaagent.analyzers.models import Route
+            from qaagent.doc.generator import generate_documentation, save_documentation
+
+            # Load discovered routes from routes.json to reuse them
+            discovered_routes = None
+            if routes_file.exists():
+                raw = _json.loads(routes_file.read_text(encoding="utf-8"))
+                discovered_routes = [Route.model_validate(r) for r in raw]
+
+            doc = generate_documentation(
+                source_dir=repo_path,
+                app_name=repo.name,
+                routes=discovered_routes,
+                use_llm=False,
+            )
+            save_documentation(doc, repo_path)
+        except Exception as exc:
+            import logging
+            logging.getLogger("qaagent.api").warning(
+                "Doc generation failed for %s: %s", repo_id, exc
+            )
+            doc_warning = f"Documentation generation failed: {exc}"
+
         # Update repository metadata
         repo.status = "ready"
         repo.last_scan = datetime.now().isoformat()
         repo.run_count += 1
 
+        result_msg = "Analysis completed successfully"
+        if doc_warning:
+            result_msg += f" (warning: {doc_warning})"
+
         return {
             "status": "completed",
             "repo_id": repo_id,
-            "message": "Analysis completed successfully"
+            "message": result_msg,
         }
 
     except subprocess.TimeoutExpired:

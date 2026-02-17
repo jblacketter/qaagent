@@ -1,7 +1,36 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(pip install:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(qaagent doctor:*)",
+      "Bash(python -c:*)",
+      "Bash(python:*)",
+      "Bash(timeout 5 qaagent-mcp:*)",
+      "Bash(git -C C:Usersjblacprojectsqaagent log --oneline --all)",
+      "Bash(git -C C:Usersjblacprojectsqaagent log --oneline --all --grep=\"doc\")",
+      "Bash(qaagent doc --help:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(qaagent analyze:*)",
+      "Bash(qaagent generate:*)",
+      "Bash(qaagent targets add:*)",
+      "Bash(qaagent use:*)",
+      "Bash(gh repo view:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(ai-handoff-setup:*)",
+      "Bash(ai-handoff setup:*)",
+      "Bash(del \"C:\\\\Users\\\\jblac\\\\projects\\\\qaagent\\\\.handoff-state.tmp\")",
+      "Bash(ls \"C:\\\\Users\\\\jblac\\\\projects\\\\qaagent\\\\tests\\\\api\"\" 2>&1 || echo \"DIR_NOT_FOUND \")",
+      "Bash(pushd:*)",
+      "Bash(popd:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []

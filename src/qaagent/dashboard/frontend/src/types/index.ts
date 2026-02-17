@@ -197,6 +197,37 @@ export interface ArchitectureEdge {
   type: string;
 }
 
+export interface JourneyStep {
+  order: number;
+  action: string;
+  page_or_route: string | null;
+  expected_outcome: string;
+}
+
+export interface UserRole {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  associated_features: string[];
+}
+
+export interface UserJourney {
+  id: string;
+  name: string;
+  description: string;
+  actor: string;
+  steps: JourneyStep[];
+  feature_ids: string[];
+  priority: "high" | "medium" | "low";
+}
+
+export interface AgentAnalysis {
+  enhanced_markdown: string;
+  model_used: string;
+  generated_at: string;
+}
+
 export interface AppDocumentation {
   app_name: string;
   summary: string;
@@ -209,5 +240,10 @@ export interface AppDocumentation {
   architecture_nodes: ArchitectureNode[];
   architecture_edges: ArchitectureEdge[];
   total_routes: number;
+  app_overview: string;
+  tech_stack: string[];
+  user_roles: UserRole[];
+  user_journeys: UserJourney[];
+  agent_analysis?: AgentAnalysis | null;
   metadata: Record<string, unknown>;
 }

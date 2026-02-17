@@ -41,12 +41,13 @@ if dashboard_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
 
 # Mount API routers used by the React dashboard
-from qaagent.api.routes import runs, evidence, repositories, fix, doc
+from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent
 app.include_router(repositories.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(evidence.router, prefix="/api")
 app.include_router(fix.router, prefix="/api")
 app.include_router(doc.router, prefix="/api")
+app.include_router(agent.router, prefix="/api")
 
 
 class TargetInput(BaseModel):
@@ -290,11 +291,11 @@ async def generate_tests_endpoint(request: CommandRequest):
         generator = UnitTestGenerator(routes, base_url=request.params.get("base_url", "http://localhost:3000"))
         generated = generator.generate(tests_dir)
 
-        await broadcast({"type": "success", "message": f"Generated {len(generated)} test files"})
+        await broadcast({"type": "success", "message": f"Generated {generated.file_count} test files"})
 
         return JSONResponse({
             "success": True,
-            "files": len(generated),
+            "files": generated.file_count,
             "directory": str(tests_dir),
         })
     except Exception as e:

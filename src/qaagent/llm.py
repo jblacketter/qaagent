@@ -45,10 +45,12 @@ class LLMClient:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        api_key: Optional[str] = None,
     ):
         self.provider = provider or os.environ.get("QAAGENT_LLM", "ollama")
         self.model = model or os.environ.get("QAAGENT_MODEL", "qwen2.5:7b")
         self.temperature = temperature or float(os.environ.get("QAAGENT_TEMP", "0.2"))
+        self.api_key = api_key  # Passed directly to litellm, never persisted to env
 
     def _litellm_model(self) -> str:
         """Build the litellm model string from provider + model."""
@@ -61,7 +63,7 @@ class LLMClient:
         # Default: pass through as-is (litellm can figure it out)
         return f"{self.provider}/{self.model}" if "/" not in self.model else self.model
 
-    def chat(self, messages: list[ChatMessage]) -> ChatResponse:
+    def chat(self, messages: list[ChatMessage], timeout: Optional[int] = 120) -> ChatResponse:
         """Send messages to configured LLM provider via litellm."""
         try:
             import litellm
@@ -72,12 +74,18 @@ class LLMClient:
 
         litellm_messages = [{"role": m.role, "content": m.content} for m in messages]
 
+        kwargs: Dict[str, Any] = {
+            "model": self._litellm_model(),
+            "messages": litellm_messages,
+            "temperature": self.temperature,
+        }
+        if self.api_key:
+            kwargs["api_key"] = self.api_key
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+
         try:
-            response = litellm.completion(
-                model=self._litellm_model(),
-                messages=litellm_messages,
-                temperature=self.temperature,
-            )
+            response = litellm.completion(**kwargs)
         except Exception as exc:
             raise QAAgentLLMError(f"LLM request failed: {exc}") from exc
 

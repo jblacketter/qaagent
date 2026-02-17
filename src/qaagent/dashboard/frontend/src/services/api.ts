@@ -19,7 +19,7 @@ import type {
   ArchitectureEdge,
 } from "../types";
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export class QAAgentAPI {
   constructor(private readonly baseURL: string = DEFAULT_BASE_URL) {}
@@ -115,44 +115,108 @@ export class QAAgentAPI {
   }
 
   // App Documentation
-  async getAppDoc(): Promise<AppDocumentation> {
-    return this.request(`/api/doc`);
+  private _docQuery(path: string, repoId?: string): string {
+    return repoId ? `${path}?repo_id=${encodeURIComponent(repoId)}` : path;
   }
 
-  async getFeatures(): Promise<FeatureArea[]> {
-    const result = await this.request<{ features: FeatureArea[] }>(`/api/doc/features`);
+  async getAppDoc(repoId?: string): Promise<AppDocumentation> {
+    return this.request(this._docQuery(`/api/doc`, repoId));
+  }
+
+  async getFeatures(repoId?: string): Promise<FeatureArea[]> {
+    const result = await this.request<{ features: FeatureArea[] }>(this._docQuery(`/api/doc/features`, repoId));
     return result.features;
   }
 
-  async getFeature(featureId: string): Promise<FeatureArea> {
-    return this.request(`/api/doc/features/${featureId}`);
+  async getFeature(featureId: string, repoId?: string): Promise<FeatureArea> {
+    return this.request(this._docQuery(`/api/doc/features/${featureId}`, repoId));
   }
 
-  async getIntegrations(): Promise<Integration[]> {
-    const result = await this.request<{ integrations: Integration[] }>(`/api/doc/integrations`);
+  async getIntegrations(repoId?: string): Promise<Integration[]> {
+    const result = await this.request<{ integrations: Integration[] }>(this._docQuery(`/api/doc/integrations`, repoId));
     return result.integrations;
   }
 
-  async getDiscoveredCujs(): Promise<DiscoveredCUJ[]> {
-    const result = await this.request<{ cujs: DiscoveredCUJ[] }>(`/api/doc/cujs`);
+  async getDiscoveredCujs(repoId?: string): Promise<DiscoveredCUJ[]> {
+    const result = await this.request<{ cujs: DiscoveredCUJ[] }>(this._docQuery(`/api/doc/cujs`, repoId));
     return result.cujs;
   }
 
-  async getArchitecture(): Promise<{ nodes: ArchitectureNode[]; edges: ArchitectureEdge[] }> {
-    return this.request(`/api/doc/architecture`);
+  async getArchitecture(repoId?: string): Promise<{ nodes: ArchitectureNode[]; edges: ArchitectureEdge[] }> {
+    return this.request(this._docQuery(`/api/doc/architecture`, repoId));
   }
 
-  async regenerateDoc(noLlm = false): Promise<AppDocumentation> {
-    return this.request(`/api/doc/regenerate`, {
+  async regenerateDoc(noLlm = false, repoId?: string): Promise<AppDocumentation> {
+    return this.request(this._docQuery(`/api/doc/regenerate`, repoId), {
       method: "POST",
       body: JSON.stringify({ no_llm: noLlm }),
     });
   }
 
-  async exportDocMarkdown(): Promise<string> {
-    const result = await this.request<{ content: string }>(`/api/doc/export/markdown`);
+  async exportDocMarkdown(repoId?: string): Promise<string> {
+    const result = await this.request<{ content: string }>(this._docQuery(`/api/doc/export/markdown`, repoId));
     return result.content;
   }
+
+  // Agent endpoints
+  private _agentQuery(path: string, repoId?: string): string {
+    return repoId ? `${path}?repo_id=${encodeURIComponent(repoId)}` : path;
+  }
+
+  async getAgentConfig(repoId: string): Promise<AgentConfigResponse> {
+    return this.request(this._agentQuery(`/api/agent/config`, repoId));
+  }
+
+  async saveAgentConfig(repoId: string, config: AgentConfigRequest): Promise<AgentConfigResponse> {
+    return this.request(this._agentQuery(`/api/agent/config`, repoId), {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
+  }
+
+  async deleteAgentConfig(repoId: string): Promise<{ status: string }> {
+    return this.request(this._agentQuery(`/api/agent/config`, repoId), { method: "DELETE" });
+  }
+
+  async analyzeWithAgent(repoId: string): Promise<AgentAnalyzeResponse> {
+    return this.request(this._agentQuery(`/api/agent/analyze`, repoId), { method: "POST" });
+  }
+
+  async getAgentUsage(repoId: string): Promise<AgentUsageResponse> {
+    return this.request(this._agentQuery(`/api/agent/usage`, repoId));
+  }
+
+  async resetAgentUsage(repoId: string): Promise<{ status: string }> {
+    return this.request(this._agentQuery(`/api/agent/usage`, repoId), { method: "DELETE" });
+  }
+}
+
+export interface AgentConfigRequest {
+  provider: string;
+  model: string;
+  api_key: string;
+}
+
+export interface AgentConfigResponse {
+  provider: string;
+  model: string;
+  api_key_masked: string;
+  configured: boolean;
+}
+
+export interface AgentAnalyzeResponse {
+  content: string;
+  model: string;
+  usage: Record<string, number>;
+}
+
+export interface AgentUsageResponse {
+  repo_id: string;
+  requests: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
 }
 
 export const apiClient = new QAAgentAPI();

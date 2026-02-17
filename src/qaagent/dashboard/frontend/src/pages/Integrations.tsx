@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../services/api";
 import { IntegrationCard } from "../components/Doc/IntegrationCard";
@@ -9,10 +10,13 @@ const ALL_TYPES = "all";
 
 export function IntegrationsPage() {
   const [filterType, setFilterType] = useState(ALL_TYPES);
+  const [searchParams] = useSearchParams();
+  const repoId = searchParams.get("repo") ?? undefined;
 
   const integrationsQuery = useQuery({
-    queryKey: ["integrations"],
-    queryFn: () => apiClient.getIntegrations(),
+    queryKey: ["integrations", repoId],
+    queryFn: () => apiClient.getIntegrations(repoId),
+    enabled: Boolean(repoId),
   });
 
   const integrations = integrationsQuery.data ?? [];
@@ -26,6 +30,23 @@ export function IntegrationsPage() {
     if (filterType === ALL_TYPES) return integrations;
     return integrations.filter((i) => i.type === filterType);
   }, [integrations, filterType]);
+
+  if (!repoId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">External Integrations</h1>
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Select a repository to view its integrations.
+        </p>
+        <Link
+          to="/repositories"
+          className="mt-6 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+        >
+          Go to Repositories
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

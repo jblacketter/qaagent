@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../services/api";
 import { RouteTable } from "../components/Doc/RouteTable";
@@ -7,16 +7,20 @@ import { Alert } from "../components/ui/Alert";
 
 export function FeatureDetailPage() {
   const { featureId } = useParams<{ featureId: string }>();
+  const [searchParams] = useSearchParams();
+  const repoId = searchParams.get("repo") ?? undefined;
+  const repoQuery = repoId ? `?repo=${encodeURIComponent(repoId)}` : "";
 
   const featureQuery = useQuery({
-    queryKey: ["feature", featureId],
-    queryFn: () => apiClient.getFeature(featureId!),
-    enabled: Boolean(featureId),
+    queryKey: ["feature", featureId, repoId],
+    queryFn: () => apiClient.getFeature(featureId!, repoId),
+    enabled: Boolean(featureId) && Boolean(repoId),
   });
 
   const integrationsQuery = useQuery({
-    queryKey: ["integrations"],
-    queryFn: () => apiClient.getIntegrations(),
+    queryKey: ["integrations", repoId],
+    queryFn: () => apiClient.getIntegrations(repoId),
+    enabled: Boolean(repoId),
   });
 
   const feature = featureQuery.data;
@@ -26,10 +30,27 @@ export function FeatureDetailPage() {
     (i) => feature?.integration_ids.includes(i.id) || i.connected_features.includes(feature?.id ?? "")
   );
 
+  if (!repoId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Feature Detail</h1>
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Select a repository to view feature details.
+        </p>
+        <Link
+          to="/repositories"
+          className="mt-6 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+        >
+          Go to Repositories
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-        <Link to="/doc" className="hover:text-slate-700 dark:hover:text-slate-200">
+        <Link to={`/doc${repoQuery}`} className="hover:text-slate-700 dark:hover:text-slate-200">
           App Docs
         </Link>
         <span>/</span>

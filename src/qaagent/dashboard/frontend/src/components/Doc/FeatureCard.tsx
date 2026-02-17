@@ -10,12 +10,15 @@ const methodColors: Record<string, string> = {
 
 interface FeatureCardProps {
   feature: FeatureArea;
+  repoId?: string;
 }
 
-export function FeatureCard({ feature }: FeatureCardProps) {
+export function FeatureCard({ feature, repoId }: FeatureCardProps) {
+  const repoQuery = repoId ? `?repo=${encodeURIComponent(repoId)}` : "";
+
   return (
     <Link
-      to={`/doc/features/${feature.id}`}
+      to={`/doc/features/${feature.id}${repoQuery}`}
       className="block rounded-lg border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
     >
       <div className="flex items-start justify-between">

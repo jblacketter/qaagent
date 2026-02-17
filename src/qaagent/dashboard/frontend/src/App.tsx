@@ -16,6 +16,7 @@ import { AppDocPage } from "./pages/AppDoc";
 import { FeatureDetailPage } from "./pages/FeatureDetail";
 import { IntegrationsPage } from "./pages/Integrations";
 import { ArchitecturePage } from "./pages/Architecture";
+import { AgentPage } from "./pages/Agent";
 
 function App() {
   const location = useLocation();
@@ -42,6 +43,7 @@ function App() {
             <Route path="/doc/features/:featureId" element={<FeatureDetailPage />} />
             <Route path="/doc/integrations" element={<IntegrationsPage />} />
             <Route path="/doc/architecture" element={<ArchitecturePage />} />
+            <Route path="/agent" element={<AgentPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Routes>
         </Layout>

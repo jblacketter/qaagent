@@ -90,6 +90,37 @@ class DiscoveredCUJ(BaseModel):
     confidence: float = 1.0
 
 
+class JourneyStep(BaseModel):
+    """A single step in a user journey."""
+
+    order: int
+    action: str  # human-readable action description
+    page_or_route: Optional[str] = None
+    expected_outcome: str = ""
+
+
+class UserRole(BaseModel):
+    """A user role inferred from route analysis."""
+
+    id: str
+    name: str
+    description: str = ""
+    permissions: List[str] = Field(default_factory=list)
+    associated_features: List[str] = Field(default_factory=list)
+
+
+class UserJourney(BaseModel):
+    """A user journey describing an end-to-end workflow."""
+
+    id: str
+    name: str
+    description: str = ""
+    actor: str = "anonymous"  # role ID or "anonymous"
+    steps: List[JourneyStep] = Field(default_factory=list)
+    feature_ids: List[str] = Field(default_factory=list)
+    priority: str = "medium"  # "high", "medium", "low"
+
+
 class ArchitectureNode(BaseModel):
     """A node in the architecture diagram."""
 
@@ -110,6 +141,14 @@ class ArchitectureEdge(BaseModel):
     type: str = "default"  # "default", "shared_integration", "parent_child"
 
 
+class AgentAnalysis(BaseModel):
+    """LLM-enhanced documentation persisted alongside app docs."""
+
+    enhanced_markdown: str
+    model_used: str = ""
+    generated_at: str = ""
+
+
 class AppDocumentation(BaseModel):
     """Complete documentation for an application."""
 
@@ -124,4 +163,9 @@ class AppDocumentation(BaseModel):
     architecture_nodes: List[ArchitectureNode] = Field(default_factory=list)
     architecture_edges: List[ArchitectureEdge] = Field(default_factory=list)
     total_routes: int = 0
+    app_overview: str = ""
+    tech_stack: List[str] = Field(default_factory=list)
+    user_roles: List[UserRole] = Field(default_factory=list)
+    user_journeys: List[UserJourney] = Field(default_factory=list)
+    agent_analysis: Optional[AgentAnalysis] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)

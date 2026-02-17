@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../services/api";
 import { FeatureMapDiagram } from "../components/Doc/FeatureMapDiagram";
@@ -17,10 +18,13 @@ const tabs: { key: DiagramType; label: string }[] = [
 
 export function ArchitecturePage() {
   const [activeTab, setActiveTab] = useState<DiagramType>("feature_map");
+  const [searchParams] = useSearchParams();
+  const repoId = searchParams.get("repo") ?? undefined;
 
   const archQuery = useQuery({
-    queryKey: ["architecture"],
-    queryFn: () => apiClient.getArchitecture(),
+    queryKey: ["architecture", repoId],
+    queryFn: () => apiClient.getArchitecture(repoId),
+    enabled: Boolean(repoId),
   });
 
   const filteredData = useMemo(() => {
@@ -37,6 +41,23 @@ export function ArchitecturePage() {
 
     return { nodes, edges };
   }, [archQuery.data, activeTab]);
+
+  if (!repoId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Architecture</h1>
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Select a repository to view its architecture diagrams.
+        </p>
+        <Link
+          to="/repositories"
+          className="mt-6 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+        >
+          Go to Repositories
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

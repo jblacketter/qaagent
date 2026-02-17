@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import List
 
+from typing import List as _List
+
 from .models import AppDocumentation, FeatureArea, Integration
 
 
@@ -28,6 +30,60 @@ def _template_app_summary(doc: AppDocumentation) -> str:
 
     parts.append(".")
     return "".join(parts)
+
+
+def _template_app_overview(doc: AppDocumentation) -> str:
+    """Generate a multi-paragraph human-readable app overview."""
+    paragraphs: _List[str] = []
+
+    # Paragraph 1: What the app is and what it does
+    p1_parts = [f"{doc.app_name} is"]
+    if doc.tech_stack:
+        p1_parts.append(f" a {', '.join(doc.tech_stack[:3])} application")
+    else:
+        p1_parts.append(" an application")
+    if doc.features:
+        names = [f.name for f in doc.features[:4]]
+        p1_parts.append(f" that provides {', '.join(names)}")
+        if len(doc.features) > 4:
+            p1_parts.append(f", and {len(doc.features) - 4} additional feature area(s)")
+    p1_parts.append(f". The system exposes {doc.total_routes} API endpoint(s)")
+    auth_count = sum(1 for f in doc.features if f.auth_required)
+    if auth_count:
+        p1_parts.append(f", of which {auth_count} feature area(s) require authentication")
+    p1_parts.append(".")
+    paragraphs.append("".join(p1_parts))
+
+    # Paragraph 2: Integrations and tech stack
+    if doc.integrations or doc.tech_stack:
+        p2_parts = []
+        if doc.integrations:
+            int_names = [i.name for i in doc.integrations[:5]]
+            p2_parts.append(f"The application integrates with {', '.join(int_names)}")
+            if len(doc.integrations) > 5:
+                p2_parts.append(f" and {len(doc.integrations) - 5} other service(s)")
+            p2_parts.append(".")
+        if doc.tech_stack:
+            p2_parts.append(f" Built with {', '.join(doc.tech_stack)}.")
+        paragraphs.append("".join(p2_parts).strip())
+
+    # Paragraph 3: Key capabilities
+    crud_features = [f for f in doc.features if f.has_full_crud]
+    if crud_features or doc.discovered_cujs:
+        p3_parts = ["Key capabilities include"]
+        capabilities = []
+        if crud_features:
+            capabilities.append(
+                f" full CRUD management for {', '.join(f.name for f in crud_features[:3])}"
+            )
+        if doc.discovered_cujs:
+            cuj_names = [c.name for c in doc.discovered_cujs[:3]]
+            capabilities.append(f" user workflows such as {', '.join(cuj_names)}")
+        p3_parts.append(" and".join(capabilities) if len(capabilities) > 1 else capabilities[0])
+        p3_parts.append(".")
+        paragraphs.append("".join(p3_parts))
+
+    return "\n\n".join(paragraphs)
 
 
 def _template_feature_description(feature: FeatureArea) -> str:
@@ -95,6 +151,7 @@ def synthesize_prose(
 def _template_synthesis(doc: AppDocumentation) -> AppDocumentation:
     """Apply template-based descriptions."""
     doc.summary = _template_app_summary(doc)
+    doc.app_overview = _template_app_overview(doc)
 
     for feature in doc.features:
         if not feature.description:
@@ -137,6 +194,25 @@ def _llm_synthesis(doc: AppDocumentation, client: object) -> AppDocumentation:
         doc.summary = response.content.strip()
     except Exception:
         doc.summary = _template_app_summary(doc)
+
+    # Generate app overview
+    try:
+        overview_prompt = (
+            f"Write a 2-3 paragraph overview of this application for product documentation.\n"
+            f"Describe what the app does, who it's for, and its key capabilities.\n\n"
+            f"App: {doc.app_name}\n"
+            f"Tech stack: {', '.join(doc.tech_stack) or 'unknown'}\n"
+            f"Total routes: {doc.total_routes}\n"
+            f"Features:\n{feature_list}\n"
+            f"Integrations:\n{integration_list or 'none detected'}\n"
+        )
+        overview_response = client.chat([
+            ChatMessage(role="system", content="You are a technical writer creating product documentation."),
+            ChatMessage(role="user", content=overview_prompt),
+        ])
+        doc.app_overview = overview_response.content.strip()
+    except Exception:
+        doc.app_overview = _template_app_overview(doc)
 
     # Generate feature descriptions
     for feature in doc.features:

@@ -8,7 +8,9 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowRight,
-  FolderOpen
+  FolderOpen,
+  BookOpen,
+  FileCode,
 } from "lucide-react";
 import { apiClient } from "../services/api";
 
@@ -73,6 +75,18 @@ export function LandingPage() {
             title="Quality Trends"
             description="Track how quality metrics evolve over time with historical analysis and trend visualization."
             color="teal"
+          />
+          <FeatureCard
+            icon={<BookOpen className="h-8 w-8" />}
+            title="Product Documentation"
+            description="Auto-generate comprehensive product documentation including feature areas, integrations, architecture diagrams, and user journeys."
+            color="indigo"
+          />
+          <FeatureCard
+            icon={<FileCode className="h-8 w-8" />}
+            title="Automated Test Generation"
+            description="Generate unit tests for discovered routes and endpoints, with customizable base URLs and output directories."
+            color="amber"
           />
         </div>
 
@@ -146,7 +160,7 @@ interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  color: "blue" | "red" | "green" | "orange" | "purple" | "teal";
+  color: "blue" | "red" | "green" | "orange" | "purple" | "teal" | "indigo" | "amber";
 }
 
 function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
@@ -157,6 +171,8 @@ function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
     orange: "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20",
     purple: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20",
     teal: "text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20",
+    indigo: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20",
+    amber: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20",
   };
 
   return (

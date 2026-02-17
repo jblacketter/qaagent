@@ -20,6 +20,8 @@ from .models import AppDocumentation, FeatureArea, Integration
 from .prose import synthesize_prose
 from .cuj_discoverer import discover_cujs
 from .graph_builder import build_all_graphs
+from .role_discoverer import discover_roles
+from .journey_builder import build_user_journeys
 
 # Default storage location within .qaagent/ directory
 APPDOC_FILENAME = "appdoc.json"
@@ -56,6 +58,75 @@ def _link_integrations_to_features(
         else:
             # Connect to all features when scope can't be determined from imports
             integration.connected_features = list(all_feature_ids)
+
+
+def _detect_tech_stack(source_dir: Path) -> List[str]:
+    """Detect technologies and frameworks from manifest files."""
+    tech: List[str] = []
+
+    # Python
+    if (source_dir / "pyproject.toml").exists() or (source_dir / "requirements.txt").exists():
+        tech.append("Python")
+        try:
+            toml_text = (source_dir / "pyproject.toml").read_text(encoding="utf-8")
+            if "fastapi" in toml_text.lower():
+                tech.append("FastAPI")
+            if "django" in toml_text.lower():
+                tech.append("Django")
+            if "flask" in toml_text.lower():
+                tech.append("Flask")
+        except (OSError, UnicodeDecodeError):
+            pass
+        try:
+            req_text = (source_dir / "requirements.txt").read_text(encoding="utf-8").lower()
+            if "fastapi" in req_text and "FastAPI" not in tech:
+                tech.append("FastAPI")
+            if "django" in req_text and "Django" not in tech:
+                tech.append("Django")
+            if "flask" in req_text and "Flask" not in tech:
+                tech.append("Flask")
+        except (OSError, UnicodeDecodeError):
+            pass
+
+    # Node.js / JavaScript / TypeScript
+    pkg_json = source_dir / "package.json"
+    if pkg_json.exists():
+        try:
+            pkg_text = pkg_json.read_text(encoding="utf-8").lower()
+            if "typescript" in pkg_text:
+                tech.append("TypeScript")
+            else:
+                tech.append("JavaScript")
+            if "next" in pkg_text:
+                tech.append("Next.js")
+            if "react" in pkg_text:
+                tech.append("React")
+            if "vue" in pkg_text:
+                tech.append("Vue.js")
+            if "angular" in pkg_text:
+                tech.append("Angular")
+            if "express" in pkg_text:
+                tech.append("Express")
+        except (OSError, UnicodeDecodeError):
+            tech.append("JavaScript")
+
+    # Go
+    if (source_dir / "go.mod").exists():
+        tech.append("Go")
+
+    # Rust
+    if (source_dir / "Cargo.toml").exists():
+        tech.append("Rust")
+
+    # Java / Kotlin
+    if (source_dir / "pom.xml").exists() or (source_dir / "build.gradle").exists():
+        tech.append("Java")
+
+    # Ruby
+    if (source_dir / "Gemfile").exists():
+        tech.append("Ruby")
+
+    return tech
 
 
 def _apply_doc_settings(
@@ -172,6 +243,11 @@ def generate_documentation(
     # Step 6: Compute content hash
     content_hash = _compute_content_hash(routes, integrations)
 
+    # Step 7: Detect tech stack
+    tech_stack: List[str] = []
+    if source_dir and source_dir.exists():
+        tech_stack = _detect_tech_stack(source_dir)
+
     # Build documentation object
     doc = AppDocumentation(
         app_name=app_name or "Application",
@@ -181,10 +257,17 @@ def generate_documentation(
         features=features,
         integrations=integrations,
         total_routes=len(routes),
+        tech_stack=tech_stack,
     )
 
     # Discover CUJs
     doc.discovered_cujs = discover_cujs(features)
+
+    # Discover user roles
+    doc.user_roles = discover_roles(features)
+
+    # Build user journeys from CUJs
+    doc.user_journeys = build_user_journeys(doc.discovered_cujs, features)
 
     # Build architecture graphs
     doc = build_all_graphs(doc)
