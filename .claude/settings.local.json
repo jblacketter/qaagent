@@ -30,7 +30,13 @@
       "Bash(ls \"C:\\\\Users\\\\jblac\\\\projects\\\\qaagent\\\\tests\\\\api\"\" 2>&1 || echo \"DIR_NOT_FOUND \")",
       "Bash(pushd:*)",
       "Bash(popd:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "WebFetch(domain:diataxis.fr)",
+      "WebFetch(domain:www.archbee.com)",
+      "WebFetch(domain:gitbook.com)",
+      "WebFetch(domain:blog.sequinstream.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:practicaltypography.com)"
     ],
     "deny": [],
     "ask": []

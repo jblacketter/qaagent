@@ -10,3 +10,75 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
+
+/* Prose table enhancements — zebra striping and hover */
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.prose thead th {
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.dark .prose thead th {
+  border-bottom-color: #334155;
+}
+
+.prose tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.dark .prose tbody tr:nth-child(even) {
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.prose tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+.dark .prose tbody tr:hover {
+  background-color: rgba(51, 65, 85, 0.5);
+}
+
+.prose td,
+.prose th {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .prose td,
+.dark .prose th {
+  border-bottom-color: #1e293b;
+}
+
+/* Prose list marker styling */
+.prose ul > li::marker {
+  color: #64748b;
+}
+
+.dark .prose ul > li::marker {
+  color: #94a3b8;
+}
+
+.prose ol > li::marker {
+  color: #475569;
+  font-weight: 600;
+}
+
+.dark .prose ol > li::marker {
+  color: #94a3b8;
+}
+
+/* Prose pre/code block enhancements */
+.prose pre {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+}
+
+.dark .prose pre {
+  border-color: #334155;
+}

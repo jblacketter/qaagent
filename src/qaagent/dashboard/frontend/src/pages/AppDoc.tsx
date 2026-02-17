@@ -127,13 +127,13 @@ export function AppDocPage() {
                 Overview
               </h2>
               {doc.app_overview ? (
-                <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                <div className="space-y-3 text-base leading-7 text-slate-600 dark:text-slate-300">
                   {doc.app_overview.split("\n\n").map((para, i) => (
                     <p key={i}>{para}</p>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-base leading-7 text-slate-600 dark:text-slate-300">
                   {doc.summary}
                 </p>
               )}
@@ -171,7 +171,7 @@ export function AppDocPage() {
                             AI
                           </span>
                         </div>
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <div className="prose prose-base max-w-none dark:prose-invert prose-headings:font-semibold prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-h3:text-base prose-h3:mt-5 prose-h3:mb-2 prose-p:leading-7 prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-li:leading-7 prose-ul:my-3 prose-ol:my-3 prose-table:text-sm prose-th:bg-slate-100 dark:prose-th:bg-slate-800 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-strong:text-slate-800 dark:prose-strong:text-slate-200 prose-code:text-sm prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-4 prose-blockquote:border-slate-300 dark:prose-blockquote:border-slate-600 prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-slate-800/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic">
                           <Markdown>{section.content}</Markdown>
                         </div>
                       </section>
@@ -180,7 +180,7 @@ export function AppDocPage() {
                 </div>
               ) : (
                 <section className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-6 dark:border-indigo-800 dark:bg-indigo-950/30">
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="prose prose-base max-w-none dark:prose-invert prose-headings:font-semibold prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-h2:text-xl prose-h2:border-b prose-h2:border-slate-200 dark:prose-h2:border-slate-700 prose-h2:pb-2 prose-h2:mb-4 prose-h3:text-base prose-h3:mt-5 prose-h3:mb-2 prose-p:leading-7 prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-li:leading-7 prose-ul:my-3 prose-ol:my-3 prose-table:text-sm prose-th:bg-slate-100 dark:prose-th:bg-slate-800 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-strong:text-slate-800 dark:prose-strong:text-slate-200 prose-code:text-sm prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-4 prose-blockquote:border-slate-300 dark:prose-blockquote:border-slate-600 prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-slate-800/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic">
                     <Markdown>{doc.agent_analysis.enhanced_markdown}</Markdown>
                   </div>
                 </section>
