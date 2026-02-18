@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from qaagent.evidence.run_manager import RunManager
+from qaagent import db
 
 
 router = APIRouter(tags=["repositories"])
@@ -41,9 +42,65 @@ class AnalyzeRequest(BaseModel):
     force: bool = False
 
 
-# Simple in-memory storage for now
-# TODO: Replace with persistent storage (SQLite, JSON file, etc.)
-repositories: dict[str, Repository] = {}
+# ---------------------------------------------------------------------------
+# RepositoryStore — SQLite-backed dict-like object
+# ---------------------------------------------------------------------------
+
+class RepositoryStore:
+    """Dict-like facade backed by SQLite via qaagent.db.
+
+    Supports ``in``, ``[]``, ``del``, ``get()``, ``values()``, and ``clear()``
+    so existing code (and tests) that used the old ``dict[str, Repository]``
+    continue to work unchanged.
+    """
+
+    def __contains__(self, repo_id: str) -> bool:
+        return db.repo_get(repo_id) is not None
+
+    def __getitem__(self, repo_id: str) -> Repository:
+        row = db.repo_get(repo_id)
+        if row is None:
+            raise KeyError(repo_id)
+        return Repository(**row)
+
+    def __setitem__(self, repo_id: str, repo: Repository) -> None:
+        db.repo_upsert(
+            repo_id=repo.id,
+            name=repo.name,
+            path=repo.path,
+            repo_type=repo.repo_type,
+            status=repo.status,
+            run_count=repo.run_count,
+            last_scan=repo.last_scan,
+            analysis_options=repo.analysis_options,
+        )
+
+    def __delitem__(self, repo_id: str) -> None:
+        if not db.repo_delete(repo_id):
+            raise KeyError(repo_id)
+
+    def get(self, repo_id: str, default=None):
+        row = db.repo_get(repo_id)
+        if row is None:
+            return default
+        return Repository(**row)
+
+    def values(self):
+        return [Repository(**r) for r in db.repo_list()]
+
+    def clear(self) -> None:
+        """Remove all repositories (used in tests)."""
+        conn = db.get_db()
+        conn.execute("DELETE FROM repositories")
+        conn.commit()
+
+
+repositories: RepositoryStore = RepositoryStore()
+
+
+def _persist(repo: Repository) -> None:
+    """Write the current state of a Repository back to SQLite."""
+    repositories[repo.id] = repo
 
 
 @router.get("/repositories")
@@ -120,6 +177,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
 
     # Update status to analyzing
     repo.status = "analyzing"
+    _persist(repo)
 
     try:
         # Change to repository directory
@@ -169,6 +227,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
 
             if result.returncode != 0:
                 repo.status = "error"
+                _persist(repo)
                 error_output = (result.stderr or result.stdout or "unknown error").strip()
                 cmd_name = " ".join(cmd[:3])
                 raise HTTPException(
@@ -207,6 +266,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
         repo.status = "ready"
         repo.last_scan = datetime.now().isoformat()
         repo.run_count += 1
+        _persist(repo)
 
         result_msg = "Analysis completed successfully"
         if doc_warning:
@@ -220,11 +280,13 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
 
     except subprocess.TimeoutExpired:
         repo.status = "error"
+        _persist(repo)
         raise HTTPException(status_code=500, detail="Analysis timed out after 15 minutes")
     except HTTPException:
         raise  # Don't double-wrap
     except Exception as e:
         repo.status = "error"
+        _persist(repo)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 

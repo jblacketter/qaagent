@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Markdown from "react-markdown";
 import { apiClient } from "../services/api";
 import { FeatureCard } from "../components/Doc/FeatureCard";
@@ -8,12 +8,12 @@ import { IntegrationCard } from "../components/Doc/IntegrationCard";
 import { CujCard } from "../components/Doc/CujCard";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Alert } from "../components/ui/Alert";
+import { useAutoRepo } from "../hooks/useAutoRepo";
 import type { UserJourney } from "../types";
 
 export function AppDocPage() {
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const repoId = searchParams.get("repo") ?? undefined;
+  const { repoId, isRedirecting } = useAutoRepo();
 
   const docQuery = useQuery({
     queryKey: ["appDoc", repoId],
@@ -42,6 +42,15 @@ export function AppDocPage() {
       // silently fail
     }
   };
+
+  // Auto-selecting single repo
+  if (isRedirecting) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Skeleton className="h-8 w-48" />
+      </div>
+    );
+  }
 
   // No repo selected — prompt user
   if (!repoId) {

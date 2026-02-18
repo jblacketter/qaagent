@@ -16,11 +16,13 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from qaagent import db
 from qaagent.config.manager import TargetManager
 from qaagent.workspace import Workspace
 from qaagent.discovery import NextJsRouteDiscoverer
@@ -32,6 +34,69 @@ from qaagent.generators.unit_test_generator import UnitTestGenerator
 
 app = FastAPI(title="QA Agent Web UI", version="1.0.0")
 
+
+# ---------------------------------------------------------------------------
+# Auth middleware
+# ---------------------------------------------------------------------------
+
+# Paths that never require authentication
+_AUTH_EXEMPT_PREFIXES = (
+    "/api/auth/",
+    "/assets/",
+    "/login",
+    "/setup-admin",
+)
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Enforce session-based authentication on all requests.
+
+    - If no users exist (first run), skip auth entirely so the frontend
+      can redirect to the setup-admin page.
+    - Exempt paths (auth endpoints, static assets, login/setup pages).
+    - WebSocket upgrade requests are exempted (cookie-based auth is
+      unreliable during the HTTP->WS upgrade in some clients).
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        # Always allow exempt paths
+        if any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        # Allow WebSocket upgrade only on the actual WebSocket path
+        if path == "/ws" and request.headers.get("upgrade", "").lower() == "websocket":
+            return await call_next(request)
+
+        # If no users configured yet, let everything through
+        # (frontend will redirect to /setup-admin)
+        if db.user_count() == 0:
+            return await call_next(request)
+
+        # Check session cookie
+        from qaagent.api.routes.auth import COOKIE_NAME
+        token = request.cookies.get(COOKIE_NAME)
+        if token:
+            info = db.session_validate(token)
+            if info:
+                return await call_next(request)
+
+        # Unauthenticated
+        if path.startswith("/api/"):
+            return JSONResponse({"detail": "Authentication required"}, status_code=401)
+
+        # For non-API routes, redirect to login
+        return JSONResponse(
+            status_code=307,
+            headers={"Location": "/login"},
+            content=None,
+        )
+
+
+app.add_middleware(AuthMiddleware)
+
+
 # Store active WebSocket connections for real-time updates
 active_connections: List[WebSocket] = []
 
@@ -41,13 +106,15 @@ if dashboard_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
 
 # Mount API routers used by the React dashboard
-from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent
+from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings
+app.include_router(auth.router, prefix="/api")
 app.include_router(repositories.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(evidence.router, prefix="/api")
 app.include_router(fix.router, prefix="/api")
 app.include_router(doc.router, prefix="/api")
 app.include_router(agent.router, prefix="/api")
+app.include_router(settings.router, prefix="/api")
 
 
 class TargetInput(BaseModel):

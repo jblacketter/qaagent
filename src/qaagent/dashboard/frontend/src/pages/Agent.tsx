@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../services/api";
 import type { AgentConfigRequest } from "../services/api";
 import Markdown from "react-markdown";
 import { Alert } from "../components/ui/Alert";
+import { useAutoRepo } from "../hooks/useAutoRepo";
 
 export function AgentPage() {
-  const [searchParams] = useSearchParams();
-  const repoId = searchParams.get("repo") ?? undefined;
+  const { repoId, isRedirecting } = useAutoRepo();
   const queryClient = useQueryClient();
 
   const [provider, setProvider] = useState("anthropic");
@@ -63,11 +63,19 @@ export function AgentPage() {
     },
   });
 
+  if (isRedirecting) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-slate-400">Loading...</p>
+      </div>
+    );
+  }
+
   if (!repoId) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Talk to an Agent
+          AI-Enhanced Documentation
         </h1>
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
           Select a repository to use AI-powered deep analysis.
@@ -88,7 +96,7 @@ export function AgentPage() {
     <div className="space-y-6">
       <section className="space-y-1">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Talk to an Agent
+          AI-Enhanced Documentation
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Send your project data to an LLM for enhanced product documentation.
@@ -177,8 +185,13 @@ export function AgentPage() {
           disabled={!isConfigured || analyzeMutation.isPending}
           className="rounded-md bg-blue-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
         >
-          {analyzeMutation.isPending ? "Analyzing..." : "Talk to an Agent"}
+          {analyzeMutation.isPending ? "Analyzing..." : "Generate AI Analysis"}
         </button>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+          Sends your project documentation to the configured LLM to generate a structured analysis
+          covering architecture, features, user journeys, and recommendations.
+          This is a one-time generation, not a conversation.
+        </p>
         {!isConfigured && (
           <p className="mt-2 text-xs text-slate-400">
             Configure your API key above to enable analysis.

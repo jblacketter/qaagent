@@ -144,6 +144,13 @@ def web_ui(
     try:
         from qaagent.web_ui import start_web_ui
 
+        if host == "0.0.0.0":
+            console.print()
+            console.print("[bold yellow]WARNING: Binding to 0.0.0.0 — the server will be accessible to all devices on your local network.[/bold yellow]")
+            console.print("[yellow]Make sure you have set an admin password (the app will prompt on first visit).[/yellow]")
+            console.print("[yellow]For internet-facing deployments, use a reverse proxy with HTTPS.[/yellow]")
+            console.print()
+
         console.print(f"[cyan]Starting QA Agent Web UI...[/cyan]")
         console.print(f"[green]-> Server: http://{host}:{port}[/green]")
         console.print()

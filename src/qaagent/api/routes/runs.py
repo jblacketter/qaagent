@@ -13,12 +13,48 @@ from qaagent.analyzers.evidence_reader import EvidenceReader
 router = APIRouter(tags=["runs"])
 
 
+def _run_matches_repo(handle, repo_id: str) -> bool:
+    """Check if a run's target matches a repo_id by name or path."""
+    target = handle.manifest.target
+    # Match by repo_id against the target name (lowercased, hyphenated)
+    target_id = target.name.lower().replace(" ", "-")
+    if target_id == repo_id:
+        return True
+    # Also match by path (the repo's resolved path)
+    try:
+        from qaagent.api.routes.repositories import repositories
+        repo = repositories.get(repo_id)
+        if repo and Path(repo.path).resolve() == Path(target.path).resolve():
+            return True
+    except Exception:
+        pass
+    return False
+
+
 @router.get("/runs")
-def list_runs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)) -> dict:
+def list_runs(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    repo_id: str = Query(None),
+) -> dict:
     manager = RunManager()
     runs_root = manager.base_dir
+    if not runs_root.exists():
+        return {"runs": [], "total": 0, "limit": limit, "offset": offset}
     run_ids = sorted([p.name for p in runs_root.iterdir() if p.is_dir()], reverse=True)
-    sliced = run_ids[offset : offset + limit]
+
+    # If repo_id filter, load all and filter before slicing
+    if repo_id:
+        filtered_ids: List[str] = []
+        for rid in run_ids:
+            handle = manager.load_run(rid)
+            if _run_matches_repo(handle, repo_id):
+                filtered_ids.append(rid)
+        total = len(filtered_ids)
+        sliced = filtered_ids[offset : offset + limit]
+    else:
+        total = len(run_ids)
+        sliced = run_ids[offset : offset + limit]
 
     runs: List[dict] = []
     for run_id in sliced:
@@ -32,16 +68,25 @@ def list_runs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
             }
         )
 
-    return {"runs": runs, "total": len(run_ids), "limit": limit, "offset": offset}
+    return {"runs": runs, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/runs/trends")
-def get_run_trends(limit: int = Query(10, ge=1, le=200)) -> dict:
+def get_run_trends(limit: int = Query(10, ge=1, le=200), repo_id: str = Query(None)) -> dict:
     """Return high-level metrics per run for trend visualizations."""
 
     manager = RunManager()
     runs_root = manager.base_dir
+    if not runs_root.exists():
+        return {"trend": [], "total": 0}
     run_ids = sorted([p.name for p in runs_root.iterdir() if p.is_dir()], reverse=True)
+
+    if repo_id:
+        run_ids = [
+            rid for rid in run_ids
+            if _run_matches_repo(manager.load_run(rid), repo_id)
+        ]
+
     selected = run_ids[:limit]
 
     points: List[Dict[str, object]] = []

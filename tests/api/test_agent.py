@@ -8,22 +8,20 @@ from unittest.mock import patch, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
+from qaagent import db
 from qaagent.api.routes.repositories import Repository, repositories
-from qaagent.api.routes.agent import _configs, _usage, _AgentConfig, _UsageAccumulator, _mask_key, _estimate_cost, _parse_sections, LLM_TIMEOUT_SECONDS
+from qaagent.api.routes.agent import _mask_key, _estimate_cost, _parse_sections, LLM_TIMEOUT_SECONDS
 from qaagent.doc.generator import save_documentation
 from qaagent.doc.models import AppDocumentation
 
 
 @pytest.fixture(autouse=True)
-def _clear_stores():
-    """Clear in-memory repositories, configs, and usage before/after each test."""
-    repositories.clear()
-    _configs.clear()
-    _usage.clear()
+def _isolated_db(tmp_path):
+    """Point SQLite at a temp file so tests don't touch the real DB."""
+    db.reset_connection()
+    db.set_db_path(str(tmp_path / "test.db"))
     yield
-    repositories.clear()
-    _configs.clear()
-    _usage.clear()
+    db.reset_connection()
 
 
 @pytest.fixture()
@@ -179,9 +177,7 @@ class TestAgentConfigEndpoints:
 
     def test_get_config_returns_masked_key(self, client: TestClient, sample_repo: Repository):
         """GET /api/agent/config returns masked key, never raw."""
-        _configs["test-repo"] = _AgentConfig(
-            provider="openai", model="gpt-4o", api_key="sk-secret1234secret"
-        )
+        db.agent_config_save("test-repo", "openai", "gpt-4o", "sk-secret1234secret")
         response = client.get("/api/agent/config", params={"repo_id": "test-repo"})
         assert response.status_code == 200
         data = response.json()
@@ -210,11 +206,11 @@ class TestAgentConfigEndpoints:
 
     def test_delete_config(self, client: TestClient, sample_repo: Repository):
         """DELETE /api/agent/config removes config."""
-        _configs["test-repo"] = _AgentConfig(api_key="sk-toberemoved12345678")
+        db.agent_config_save("test-repo", "anthropic", "m", "sk-toberemoved12345678")
         response = client.delete("/api/agent/config", params={"repo_id": "test-repo"})
         assert response.status_code == 200
         assert response.json()["status"] == "deleted"
-        assert "test-repo" not in _configs
+        assert db.agent_config_get("test-repo") is None
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +220,7 @@ class TestAgentConfigEndpoints:
 
 class TestAgentRepoValidation:
     def test_missing_repo_id_returns_400(self, client: TestClient):
-        """All agent endpoints require repo_id — omitting it → 400."""
+        """All agent endpoints require repo_id — omitting it -> 400."""
         assert client.get("/api/agent/config").status_code == 400
         assert client.post("/api/agent/config", json={"provider": "anthropic", "model": "m", "api_key": "k"}).status_code == 400
         assert client.delete("/api/agent/config").status_code == 400
@@ -233,7 +229,7 @@ class TestAgentRepoValidation:
         assert client.delete("/api/agent/usage").status_code == 400
 
     def test_unknown_repo_id_returns_404(self, client: TestClient):
-        """Agent endpoints with non-existent repo_id → 404."""
+        """Agent endpoints with non-existent repo_id -> 404."""
         assert client.get("/api/agent/config", params={"repo_id": "ghost"}).status_code == 404
         assert client.post("/api/agent/analyze", params={"repo_id": "ghost"}).status_code == 404
         assert client.get("/api/agent/usage", params={"repo_id": "ghost"}).status_code == 404
@@ -246,7 +242,7 @@ class TestAgentRepoValidation:
 
 class TestAnalyzeEndpoint:
     def test_analyze_no_config_returns_400(self, client: TestClient, sample_repo: Repository):
-        """POST /api/agent/analyze without config and no env var → 400."""
+        """POST /api/agent/analyze without config and no env var -> 400."""
         import os
         env_backup = os.environ.pop("ANTHROPIC_API_KEY", None)
         try:
@@ -259,9 +255,7 @@ class TestAnalyzeEndpoint:
 
     def test_analyze_success_with_mocked_llm(self, client: TestClient, sample_repo: Repository):
         """POST /api/agent/analyze with mocked LLM returns content and accumulates usage."""
-        _configs["test-repo"] = _AgentConfig(
-            provider="anthropic", model="claude-sonnet-4-5-20250929", api_key="sk-test1234abcd5678"
-        )
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
 
         mock_response = MagicMock()
         mock_response.content = "# Enhanced Documentation\n\nGreat app."
@@ -282,17 +276,15 @@ class TestAnalyzeEndpoint:
         assert data["model"] == "claude-sonnet-4-5-20250929"
 
         # Usage was accumulated
-        assert "test-repo" in _usage
-        assert _usage["test-repo"].requests == 1
-        assert _usage["test-repo"].prompt_tokens == 500
-        assert _usage["test-repo"].completion_tokens == 200
-        assert _usage["test-repo"].total_tokens == 700
+        usage = db.agent_usage_get("test-repo")
+        assert usage["requests"] == 1
+        assert usage["prompt_tokens"] == 500
+        assert usage["completion_tokens"] == 200
+        assert usage["total_tokens"] == 700
 
     def test_analyze_llm_error_returns_502(self, client: TestClient, sample_repo: Repository):
-        """POST /api/agent/analyze when LLM fails → 502 and request still counted."""
-        _configs["test-repo"] = _AgentConfig(
-            provider="anthropic", model="claude-sonnet-4-5-20250929", api_key="sk-test1234abcd5678"
-        )
+        """POST /api/agent/analyze when LLM fails -> 502 and request still counted."""
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
 
         from qaagent.llm import QAAgentLLMError
 
@@ -303,16 +295,17 @@ class TestAnalyzeEndpoint:
         assert response.status_code == 502
         assert "timeout" in response.json()["detail"]
         # Request counted even on failure
-        assert _usage["test-repo"].requests == 1
+        usage = db.agent_usage_get("test-repo")
+        assert usage["requests"] == 1
 
     def test_analyze_no_documentation_returns_404(self, client: TestClient):
-        """POST /api/agent/analyze when repo has no documentation → 404."""
+        """POST /api/agent/analyze when repo has no documentation -> 404."""
         repo = Repository(
             id="empty-repo", name="empty-repo", path="/tmp/empty",
             repo_type="local", analysis_options={},
         )
         repositories["empty-repo"] = repo
-        _configs["empty-repo"] = _AgentConfig(api_key="sk-test1234abcd5678")
+        db.agent_config_save("empty-repo", "anthropic", "m", "sk-test1234abcd5678")
 
         with patch("qaagent.doc.generator.load_documentation", return_value=None):
             response = client.post("/api/agent/analyze", params={"repo_id": "empty-repo"})
@@ -327,7 +320,7 @@ class TestAnalyzeEndpoint:
 
 class TestUsageEndpoints:
     def test_get_usage_empty(self, client: TestClient, sample_repo: Repository):
-        """GET /api/agent/usage with no usage → zeroes."""
+        """GET /api/agent/usage with no usage -> zeroes."""
         response = client.get("/api/agent/usage", params={"repo_id": "test-repo"})
         assert response.status_code == 200
         data = response.json()
@@ -338,11 +331,9 @@ class TestUsageEndpoints:
 
     def test_get_usage_accumulated(self, client: TestClient, sample_repo: Repository):
         """GET /api/agent/usage returns accumulated stats."""
-        _configs["test-repo"] = _AgentConfig(model="claude-sonnet-4-5-20250929", api_key="k")
-        acc = _UsageAccumulator()
-        acc.add({"prompt_tokens": 1000, "completion_tokens": 500, "total_tokens": 1500})
-        acc.add({"prompt_tokens": 2000, "completion_tokens": 1000, "total_tokens": 3000})
-        _usage["test-repo"] = acc
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "k")
+        db.agent_usage_add("test-repo", prompt_tokens=1000, completion_tokens=500, total_tokens=1500)
+        db.agent_usage_add("test-repo", prompt_tokens=2000, completion_tokens=1000, total_tokens=3000)
 
         response = client.get("/api/agent/usage", params={"repo_id": "test-repo"})
         assert response.status_code == 200
@@ -355,11 +346,12 @@ class TestUsageEndpoints:
 
     def test_reset_usage(self, client: TestClient, sample_repo: Repository):
         """DELETE /api/agent/usage resets counters."""
-        _usage["test-repo"] = _UsageAccumulator(requests=5, prompt_tokens=10000)
+        db.agent_usage_add("test-repo", prompt_tokens=10000, completion_tokens=5000, total_tokens=15000)
         response = client.delete("/api/agent/usage", params={"repo_id": "test-repo"})
         assert response.status_code == 200
         assert response.json()["status"] == "reset"
-        assert "test-repo" not in _usage
+        usage = db.agent_usage_get("test-repo")
+        assert usage["requests"] == 0
 
     def test_usage_keyed_by_repo_id(self, client: TestClient):
         """Usage is keyed by repo_id — separate repos have independent counters."""
@@ -368,10 +360,8 @@ class TestUsageEndpoints:
         repositories["repo-a"] = repo_a
         repositories["repo-b"] = repo_b
 
-        _configs["repo-a"] = _AgentConfig(model="gpt-4o", api_key="k")
-        acc_a = _UsageAccumulator()
-        acc_a.add({"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150})
-        _usage["repo-a"] = acc_a
+        db.agent_config_save("repo-a", "anthropic", "gpt-4o", "k")
+        db.agent_usage_add("repo-a", prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         resp_a = client.get("/api/agent/usage", params={"repo_id": "repo-a"})
         resp_b = client.get("/api/agent/usage", params={"repo_id": "repo-b"})
@@ -388,9 +378,7 @@ class TestUsageEndpoints:
 class TestAgentAnalysisPersistence:
     def test_analyze_auto_saves_agent_analysis(self, client: TestClient, sample_repo: Repository, tmp_path: Path):
         """POST /api/agent/analyze auto-saves agent_analysis with sections into appdoc.json."""
-        _configs["test-repo"] = _AgentConfig(
-            provider="anthropic", model="claude-sonnet-4-5-20250929", api_key="sk-test1234abcd5678"
-        )
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
 
         mock_response = MagicMock()
         mock_response.content = (
@@ -475,9 +463,7 @@ class TestEnvVarFallback:
 
     def test_explicit_config_overrides_env_var(self, client: TestClient, sample_repo: Repository):
         """Explicit config takes precedence over ANTHROPIC_API_KEY env var."""
-        _configs["test-repo"] = _AgentConfig(
-            provider="openai", model="gpt-4o", api_key="sk-explicit12345678"
-        )
+        db.agent_config_save("test-repo", "openai", "gpt-4o", "sk-explicit12345678")
 
         with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-envvar1234567890"}):
             response = client.get("/api/agent/config", params={"repo_id": "test-repo"})

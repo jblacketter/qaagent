@@ -14,6 +14,15 @@ from fastapi.testclient import TestClient
 from qaagent.generators.base import GenerationResult
 
 
+@pytest.fixture(autouse=True)
+def _isolated_db(tmp_path):
+    from qaagent import db
+    db.reset_connection()
+    db.set_db_path(str(tmp_path / "test.db"))
+    yield
+    db.reset_connection()
+
+
 @pytest.fixture()
 def client():
     from qaagent.web_ui import app

@@ -20,11 +20,13 @@ from qaagent.doc.models import (
 
 
 @pytest.fixture(autouse=True)
-def _clear_repos():
-    """Clear in-memory repositories before/after each test."""
-    repositories.clear()
+def _isolated_db(tmp_path):
+    """Point SQLite at a temp file so tests don't touch the real DB."""
+    from qaagent import db
+    db.reset_connection()
+    db.set_db_path(str(tmp_path / "test.db"))
     yield
-    repositories.clear()
+    db.reset_connection()
 
 
 @pytest.fixture()

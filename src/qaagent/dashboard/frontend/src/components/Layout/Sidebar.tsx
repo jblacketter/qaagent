@@ -27,7 +27,7 @@ const repoLinks = [
   { to: "/cuj", label: "CUJ Coverage", icon: Target },
   { to: "/trends", label: "Trends", icon: TrendingUp },
   { to: "/doc", label: "App Docs", icon: BookOpen },
-  { to: "/agent", label: "Agent", icon: Bot },
+  { to: "/agent", label: "AI Analysis", icon: Bot },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

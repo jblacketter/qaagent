@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { Layout } from "./components/Layout";
 import { LandingPage } from "./pages/Landing";
@@ -17,13 +18,50 @@ import { FeatureDetailPage } from "./pages/FeatureDetail";
 import { IntegrationsPage } from "./pages/Integrations";
 import { ArchitecturePage } from "./pages/Architecture";
 import { AgentPage } from "./pages/Agent";
+import { LoginPage } from "./pages/Login";
+import { SetupAdminPage } from "./pages/SetupAdmin";
+
+interface AuthStatus {
+  setup_required: boolean;
+  authenticated: boolean;
+  username: string | null;
+}
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Pages that don't need the sidebar/header layout
-  const noLayoutRoutes = ["/", "/setup"];
+  const noLayoutRoutes = ["/", "/setup", "/login", "/setup-admin"];
   const showLayout = !noLayoutRoutes.includes(location.pathname);
+
+  useEffect(() => {
+    // Skip auth check for pages that handle their own auth
+    if (["/login", "/setup-admin"].includes(location.pathname)) {
+      setAuthChecked(true);
+      return;
+    }
+
+    fetch("/api/auth/status")
+      .then((r) => r.json())
+      .then((data: AuthStatus) => {
+        if (data.setup_required) {
+          navigate("/setup-admin", { replace: true });
+        } else if (!data.authenticated) {
+          navigate("/login", { replace: true });
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        // If auth endpoint fails (e.g. no users table yet), proceed
+        setAuthChecked(true);
+      });
+  }, [location.pathname, navigate]);
+
+  if (!authChecked) {
+    return null; // Brief flash-free loading
+  }
 
   return (
     <>
@@ -51,6 +89,8 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/setup" element={<RepositorySetupPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/setup-admin" element={<SetupAdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}

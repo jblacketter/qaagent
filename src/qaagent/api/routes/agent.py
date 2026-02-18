@@ -5,46 +5,22 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from qaagent import db
+
 logger = logging.getLogger("qaagent.api.agent")
 
 router = APIRouter(tags=["agent"])
 
 # ---------------------------------------------------------------------------
-# In-memory stores (keyed by repo_id, never persisted to disk)
+# Helpers
 # ---------------------------------------------------------------------------
-
-@dataclass
-class _AgentConfig:
-    provider: str = "anthropic"
-    model: str = "claude-sonnet-4-5-20250929"
-    api_key: str = ""
-
-
-@dataclass
-class _UsageAccumulator:
-    requests: int = 0
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-
-    def add(self, usage: Optional[Dict[str, Any]]) -> None:
-        self.requests += 1
-        if usage:
-            self.prompt_tokens += usage.get("prompt_tokens") or 0
-            self.completion_tokens += usage.get("completion_tokens") or 0
-            self.total_tokens += usage.get("total_tokens") or 0
-
-
-# Module-level stores — memory only, lost on restart
-_configs: Dict[str, _AgentConfig] = {}
-_usage: Dict[str, _UsageAccumulator] = {}
 
 # Approximate cost per 1M tokens (input, output) in USD
 _PRICE_TABLE: Dict[str, tuple[float, float]] = {
@@ -93,19 +69,28 @@ def _require_repo_id(repo_id: Optional[str]) -> str:
     return repo_id
 
 
+@dataclass
+class _AgentConfig:
+    provider: str = "anthropic"
+    model: str = "claude-sonnet-4-5-20250929"
+    api_key: str = ""
+
+
 def _effective_config(repo_id: str) -> _AgentConfig:
-    """Return the in-memory config, falling back to ANTHROPIC_API_KEY env var."""
-    cfg = _configs.get(repo_id)
-    if cfg and cfg.api_key:
-        return cfg
+    """Return stored config from SQLite, falling back to ANTHROPIC_API_KEY env var."""
+    row = db.agent_config_get(repo_id)
+    if row and row["api_key"]:
+        return _AgentConfig(provider=row["provider"], model=row["model"], api_key=row["api_key"])
     env_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if env_key:
         return _AgentConfig(
-            provider=(cfg.provider if cfg else "anthropic"),
-            model=(cfg.model if cfg else "claude-sonnet-4-5-20250929"),
+            provider=(row["provider"] if row else "anthropic"),
+            model=(row["model"] if row else "claude-sonnet-4-5-20250929"),
             api_key=env_key,
         )
-    return cfg or _AgentConfig()
+    if row:
+        return _AgentConfig(provider=row["provider"], model=row["model"], api_key=row["api_key"])
+    return _AgentConfig()
 
 
 # ---------------------------------------------------------------------------
@@ -130,13 +115,9 @@ def save_agent_config(
     body: AgentConfigRequest,
     repo_id: Optional[str] = Query(None),
 ) -> AgentConfigResponse:
-    """Save agent configuration (memory-only)."""
+    """Save agent configuration (persisted to SQLite)."""
     rid = _require_repo_id(repo_id)
-    _configs[rid] = _AgentConfig(
-        provider=body.provider,
-        model=body.model,
-        api_key=body.api_key,
-    )
+    db.agent_config_save(rid, body.provider, body.model, body.api_key)
     return AgentConfigResponse(
         provider=body.provider,
         model=body.model,
@@ -166,7 +147,7 @@ def delete_agent_config(
 ) -> dict[str, str]:
     """Clear agent configuration."""
     rid = _require_repo_id(repo_id)
-    _configs.pop(rid, None)
+    db.agent_config_delete(rid)
     return {"status": "deleted", "repo_id": rid}
 
 
@@ -359,10 +340,6 @@ def analyze_with_agent(
         api_key=cfg.api_key,
     )
 
-    # Ensure usage accumulator exists
-    if rid not in _usage:
-        _usage[rid] = _UsageAccumulator()
-
     try:
         response = client.chat(
             [
@@ -373,11 +350,17 @@ def analyze_with_agent(
         )
     except QAAgentLLMError as exc:
         # Count the request even on failure (no usage data available)
-        _usage[rid].requests += 1
+        db.agent_usage_add(rid)
         raise HTTPException(status_code=502, detail=f"LLM request failed: {exc}")
 
     # Accumulate usage
-    _usage[rid].add(response.usage)
+    usage = response.usage or {}
+    db.agent_usage_add(
+        rid,
+        prompt_tokens=usage.get("prompt_tokens") or 0,
+        completion_tokens=usage.get("completion_tokens") or 0,
+        total_tokens=usage.get("total_tokens") or 0,
+    )
 
     # Parse sections and auto-save agent analysis to appdoc.json
     sections = _parse_sections(response.content)
@@ -418,17 +401,17 @@ def get_agent_usage(
 ) -> UsageResponse:
     """Get cumulative token usage for a repository."""
     rid = _require_repo_id(repo_id)
-    acc = _usage.get(rid, _UsageAccumulator())
+    acc = db.agent_usage_get(rid)
     # Determine model for cost estimation
-    cfg = _configs.get(rid)
-    model = cfg.model if cfg else ""
-    cost = _estimate_cost(model, acc.prompt_tokens, acc.completion_tokens)
+    cfg_row = db.agent_config_get(rid)
+    model = cfg_row["model"] if cfg_row else ""
+    cost = _estimate_cost(model, acc["prompt_tokens"], acc["completion_tokens"])
     return UsageResponse(
         repo_id=rid,
-        requests=acc.requests,
-        prompt_tokens=acc.prompt_tokens,
-        completion_tokens=acc.completion_tokens,
-        total_tokens=acc.total_tokens,
+        requests=acc["requests"],
+        prompt_tokens=acc["prompt_tokens"],
+        completion_tokens=acc["completion_tokens"],
+        total_tokens=acc["total_tokens"],
         estimated_cost_usd=cost,
     )
 
@@ -439,5 +422,5 @@ def reset_agent_usage(
 ) -> dict[str, str]:
     """Reset token usage counters for a repository."""
     rid = _require_repo_id(repo_id)
-    _usage.pop(rid, None)
+    db.agent_usage_reset(rid)
     return {"status": "reset", "repo_id": rid}

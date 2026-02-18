@@ -30,6 +30,12 @@ export class QAAgentAPI {
       ...init,
     });
 
+    if (response.status === 401) {
+      // Session expired or not authenticated — redirect to login
+      window.location.href = "/login";
+      throw new Error("Authentication required");
+    }
+
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || `Request failed with status ${response.status}`);
@@ -189,6 +195,23 @@ export class QAAgentAPI {
   async resetAgentUsage(repoId: string): Promise<{ status: string }> {
     return this.request(this._agentQuery(`/api/agent/usage`, repoId), { method: "DELETE" });
   }
+
+  // Settings
+  async getSettings(): Promise<AppSettingsResponse> {
+    return this.request(`/api/settings`);
+  }
+
+  async clearDatabase(): Promise<{ status: string }> {
+    return this.request(`/api/settings/clear-database`, { method: "POST" });
+  }
+
+  // Auth: change password
+  async changePassword(oldPassword: string, newPassword: string): Promise<{ status: string }> {
+    return this.request(`/api/auth/change-password`, {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    });
+  }
 }
 
 export interface AgentConfigRequest {
@@ -217,6 +240,15 @@ export interface AgentUsageResponse {
   completion_tokens: number;
   total_tokens: number;
   estimated_cost_usd: number;
+}
+
+export interface AppSettingsResponse {
+  version: string;
+  db_path: string;
+  auth_enabled: boolean;
+  username: string | null;
+  repos_count: number;
+  runs_count: number;
 }
 
 export const apiClient = new QAAgentAPI();
