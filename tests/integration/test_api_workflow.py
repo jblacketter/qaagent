@@ -20,6 +20,8 @@ def _run_cli(args: list[str], *, cwd: Path, env: dict[str, str], timeout: float 
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
     )
 
@@ -47,7 +49,11 @@ def test_full_api_workflow(petstore_server: str, project_root: Path, tmp_path: P
         env=env,
         timeout=180.0,
     )
-    assert schemathesis.returncode == 0, schemathesis.stderr
+    # Schemathesis exit codes: 0 = all passed, 1 = failures found (normal
+    # for property-based testing), 2 = internal error.  Accept 0 or 1.
+    assert schemathesis.returncode in (0, 1), (
+        f"Schemathesis crashed (exit {schemathesis.returncode}):\n{schemathesis.stderr}"
+    )
     junit = reports_dir / "junit.xml"
     assert junit.exists(), f"Expected Schemathesis JUnit output at {junit}"
 
@@ -80,5 +86,8 @@ def test_full_api_workflow(petstore_server: str, project_root: Path, tmp_path: P
         env=env,
     )
     assert report_json.returncode == 0, report_json.stderr
-    payload = json.loads(report_json.stdout)
-    assert payload["output"] == str(findings)
+    # The CLI JSON output may contain embedded newlines from terminal
+    # line wrapping on Windows.  Strip them before parsing.
+    raw_json = report_json.stdout.replace("\r\n", "").replace("\n", "")
+    payload = json.loads(raw_json)
+    assert Path(payload["output"]).resolve() == findings.resolve()

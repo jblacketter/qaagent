@@ -107,6 +107,8 @@ async def test_mcp_detect_openapi_tool(project_root: Path, petstore_server: str)
         names = {tool.get("name") for tool in tools}
         assert {"detect_openapi", "discover_routes", "assess_risks"}.issubset(names)
 
+        # FastMCP wraps tool args: functions take `args: SomeModel`, so
+        # the JSON-RPC arguments must include `{"args": {...}}`.
         await _write_message(
             proc,
             {
@@ -115,14 +117,18 @@ async def test_mcp_detect_openapi_tool(project_root: Path, petstore_server: str)
                 "method": "tools/call",
                 "params": {
                     "name": "detect_openapi",
-                    "arguments": {"path": "examples/petstore-api", "base_url": petstore_server, "probe": True},
+                    "arguments": {"args": {"path": "examples/petstore-api", "base_url": petstore_server, "probe": True}},
                 },
             },
         )
         call_response = await _read_message(proc)
         assert "result" in call_response
         result = call_response["result"]
-        assert isinstance(result.get("files"), list)
+        # FastMCP returns tool results as {"content": [{"text": ..., "type": "text"}]}
+        content = result.get("content", [])
+        assert len(content) > 0
+        tool_output = json.loads(content[0]["text"])
+        assert isinstance(tool_output.get("files"), list)
 
         # Discover routes via MCP
         await _write_message(
@@ -133,12 +139,14 @@ async def test_mcp_detect_openapi_tool(project_root: Path, petstore_server: str)
                 "method": "tools/call",
                 "params": {
                     "name": "discover_routes",
-                    "arguments": {"openapi": "examples/petstore-api/openapi.yaml"},
+                    "arguments": {"args": {"openapi": "examples/petstore-api/openapi.yaml"}},
                 },
             },
         )
         routes_response = await _read_message(proc)
-        routes_payload = routes_response.get("result", {})
+        routes_content = routes_response.get("result", {}).get("content", [])
+        assert len(routes_content) > 0
+        routes_payload = json.loads(routes_content[0]["text"])
         assert isinstance(routes_payload.get("routes"), list)
 
         # Assess risks directly from OpenAPI
@@ -150,12 +158,14 @@ async def test_mcp_detect_openapi_tool(project_root: Path, petstore_server: str)
                 "method": "tools/call",
                 "params": {
                     "name": "assess_risks",
-                    "arguments": {"openapi": "examples/petstore-api/openapi.yaml"},
+                    "arguments": {"args": {"openapi": "examples/petstore-api/openapi.yaml"}},
                 },
             },
         )
         risks_response = await _read_message(proc)
-        risks_payload = risks_response.get("result", {})
+        risks_content = risks_response.get("result", {}).get("content", [])
+        assert len(risks_content) > 0
+        risks_payload = json.loads(risks_content[0]["text"])
         assert isinstance(risks_payload.get("risks"), list)
     finally:
         await _shutdown(proc)

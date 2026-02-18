@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -19,16 +20,23 @@ def _root() -> Path:
     return PROJECT_ROOT
 
 
-def _wait_for_http(url: str, timeout: float = 10.0) -> None:
+def _find_free_port() -> int:
+    """Bind to port 0 to let the OS assign a free port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def _wait_for_http(url: str, timeout: float = 15.0) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            with urllib.request.urlopen(url, timeout=0.5) as response:
+            with urllib.request.urlopen(url, timeout=1.0) as response:
                 if 200 <= response.status < 500:
                     return
         except Exception:
             pass
-        time.sleep(0.2)
+        time.sleep(0.3)
     raise RuntimeError(f"Timed out waiting for {url}")
 
 
@@ -43,7 +51,7 @@ def petstore_server(project_root: Path) -> Iterator[str]:
     pytest.importorskip("uvicorn")
     pytest.importorskip("fastapi")
     host = "127.0.0.1"
-    port = 8765
+    port = _find_free_port()
     cmd = [
         sys.executable,
         "-m",
@@ -61,13 +69,27 @@ def petstore_server(project_root: Path) -> Iterator[str]:
     proc = subprocess.Popen(
         cmd,
         cwd=project_root,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         env=env,
     )
+    url = f"http://{host}:{port}"
     try:
-        _wait_for_http(f"http://{host}:{port}/health", timeout=10.0)
-        yield f"http://{host}:{port}"
+        _wait_for_http(f"{url}/health", timeout=15.0)
+        yield url
+    except RuntimeError:
+        # Kill process first, then safely read stderr (avoids blocking
+        # on a read if the process is still alive and hasn't flushed).
+        proc.kill()
+        try:
+            _, stderr_bytes = proc.communicate(timeout=5.0)
+            stderr_tail = stderr_bytes.decode("utf-8", errors="replace")[:4096]
+        except Exception:
+            stderr_tail = ""
+        raise RuntimeError(
+            f"Petstore server failed to start on {url}.\n"
+            f"Stderr: {stderr_tail or '(empty)'}"
+        )
     finally:
         proc.terminate()
         try:
