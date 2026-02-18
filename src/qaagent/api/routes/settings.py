@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from qaagent import db
 from qaagent.evidence.run_manager import RunManager
 
 router = APIRouter(tags=["settings"])
+
+
+def _require_auth(request: Request) -> None:
+    """FastAPI dependency that rejects unauthenticated requests.
+
+    Works in both web_ui.py (which has AuthMiddleware) and standalone
+    api/app.py (which does not).  Skips enforcement when no users exist
+    (first-run / setup mode).
+    """
+    if db.user_count() == 0:
+        return  # no users yet — auth not configured
+
+    from qaagent.api.routes.auth import COOKIE_NAME
+    token = request.cookies.get(COOKIE_NAME)
+    if token:
+        info = db.session_validate(token)
+        if info:
+            return
+    raise HTTPException(status_code=401, detail="Authentication required.")
 
 
 class AppSettings(BaseModel):
@@ -56,7 +75,7 @@ def get_settings() -> AppSettings:
     )
 
 
-@router.post("/settings/clear-database")
+@router.post("/settings/clear-database", dependencies=[Depends(_require_auth)])
 def clear_database() -> dict[str, str]:
     """Reset all repositories, agent configs, and usage data."""
     conn = db.get_db()

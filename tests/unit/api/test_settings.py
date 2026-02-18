@@ -134,3 +134,33 @@ def test_change_password_unauthenticated(client):
         json={"old_password": "whatever", "new_password": "whatever1"},
     )
     assert resp.status_code == 401
+
+
+# ---- clear-database auth guard (regression) ----
+
+def test_clear_database_unauthenticated_rejected(client):
+    """clear-database rejects unauthenticated requests when auth is enabled."""
+    db.user_create("admin", "password123")
+    db.repo_upsert("test-repo", "Test Repo", "/tmp/test", "local")
+
+    # No login — should be rejected
+    resp = client.post("/api/settings/clear-database")
+    assert resp.status_code == 401
+
+    # Data should still be there
+    assert len(db.repo_list()) == 1
+
+
+def test_clear_database_authenticated_succeeds(client):
+    """clear-database works when authenticated."""
+    db.user_create("admin", "password123")
+    db.repo_upsert("test-repo", "Test Repo", "/tmp/test", "local")
+
+    # Login first
+    login_resp = client.post("/api/auth/login", json={"username": "admin", "password": "password123"})
+    assert login_resp.status_code == 200
+
+    resp = client.post("/api/settings/clear-database")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cleared"
+    assert db.repo_list() == []
