@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from qaagent.api.middleware import AuthMiddleware
 from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings
 
 
@@ -15,9 +16,14 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=True,
-        allow_methods=["*"]
-,
+        allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+    app.add_middleware(
+        AuthMiddleware,
+        exempt_prefixes=("/api/auth/", "/health"),
+        api_only=True,
     )
 
     @app.get("/health", tags=["meta"])

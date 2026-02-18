@@ -12,16 +12,6 @@ from qaagent import db
 from qaagent.api.app import create_app
 
 
-@pytest.fixture(autouse=True)
-def _isolate_db(tmp_path):
-    """Use a fresh temporary database for each test."""
-    db.reset_connection()
-    db_file = tmp_path / "test.db"
-    db.set_db_path(str(db_file))
-    db.get_db()  # initialize
-    yield
-    db.reset_connection()
-
 
 @pytest.fixture()
 def client():
@@ -46,6 +36,8 @@ def test_get_settings_defaults(client):
 def test_get_settings_with_user(client):
     """Settings reflects auth state when a user exists."""
     db.user_create("admin", "password123")
+    # Must authenticate — middleware protects /api/settings when users exist
+    client.post("/api/auth/login", json={"username": "admin", "password": "password123"})
     resp = client.get("/api/settings")
     data = resp.json()
     assert data["auth_enabled"] is True

@@ -136,7 +136,7 @@ def fix_issues(
 
 
 def web_ui(
-    host: str = typer.Option("127.0.0.1", help="Host to bind to"),
+    host: str = typer.Option("0.0.0.0", help="Host to bind to"),
     port: int = typer.Option(8080, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
 ):
@@ -314,7 +314,7 @@ def gen_tests(
 
 
 def api_server(
-    host: str = typer.Option("127.0.0.1", help="Host to bind"),
+    host: str = typer.Option("0.0.0.0", help="Host to bind"),
     port: int = typer.Option(8000, help="Port to bind"),
     runs_dir: Optional[Path] = typer.Option(None, "--runs-dir", help="Runs directory for the API"),
 ):

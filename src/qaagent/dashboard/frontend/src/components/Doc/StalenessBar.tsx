@@ -3,6 +3,7 @@ import { apiClient } from "../../services/api";
 
 interface StalenessBarProps {
   generatedAt: string;
+  repoId?: string;
 }
 
 function getFreshness(generatedAt: string): { label: string; color: string; bgColor: string } {
@@ -32,14 +33,14 @@ function getFreshness(generatedAt: string): { label: string; color: string; bgCo
   };
 }
 
-export function StalenessBar({ generatedAt }: StalenessBarProps) {
+export function StalenessBar({ generatedAt, repoId }: StalenessBarProps) {
   const queryClient = useQueryClient();
   const { label, color, bgColor } = getFreshness(generatedAt);
 
   const regenerateMutation = useMutation({
-    mutationFn: () => apiClient.regenerateDoc(true),
+    mutationFn: () => apiClient.regenerateDoc(true, repoId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appDoc"] });
+      queryClient.invalidateQueries({ queryKey: ["appDoc", repoId] });
     },
   });
 

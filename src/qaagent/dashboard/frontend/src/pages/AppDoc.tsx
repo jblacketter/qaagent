@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import Markdown from "react-markdown";
@@ -6,10 +6,15 @@ import { apiClient } from "../services/api";
 import { FeatureCard } from "../components/Doc/FeatureCard";
 import { IntegrationCard } from "../components/Doc/IntegrationCard";
 import { CujCard } from "../components/Doc/CujCard";
+import { StalenessBar } from "../components/Doc/StalenessBar";
+import { FeatureMapDiagram } from "../components/Doc/FeatureMapDiagram";
+import { IntegrationMapDiagram } from "../components/Doc/IntegrationMapDiagram";
+import { RouteGraphDiagram } from "../components/Doc/RouteGraphDiagram";
+import { RouteTable } from "../components/Doc/RouteTable";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Alert } from "../components/ui/Alert";
 import { useAutoRepo } from "../hooks/useAutoRepo";
-import type { UserJourney } from "../types";
+import type { UserJourney, RouteDoc } from "../types";
 
 export function AppDocPage() {
   const queryClient = useQueryClient();
@@ -72,9 +77,45 @@ export function AppDocPage() {
     );
   }
 
+  const [archTab, setArchTab] = useState<"feature" | "integration" | "route">("feature");
+  const [routesExpanded, setRoutesExpanded] = useState(false);
+
   const doc = docQuery.data;
   const isLoading = docQuery.isLoading;
   const hasError = docQuery.isError;
+
+  // Aggregate all routes from features for the route table
+  const allRoutes: RouteDoc[] = useMemo(() => {
+    if (!doc) return [];
+    return doc.features.flatMap((f) => f.routes);
+  }, [doc]);
+
+  // Filter architecture nodes/edges per diagram type
+  const archData = useMemo(() => {
+    if (!doc) return { feature: { nodes: [], edges: [] }, integration: { nodes: [], edges: [] }, route: { nodes: [], edges: [] } };
+    const nodes = doc.architecture_nodes ?? [];
+    const edges = doc.architecture_edges ?? [];
+
+    const featureNodes = nodes.filter((n) => n.type === "feature");
+    const featureIds = new Set(featureNodes.map((n) => n.id));
+    const featureEdges = edges.filter((e) => featureIds.has(e.source) && featureIds.has(e.target));
+
+    const integrationNodes = nodes.filter((n) => n.type === "feature" || n.type === "integration");
+    const integrationIds = new Set(integrationNodes.map((n) => n.id));
+    const integrationEdges = edges.filter((e) => integrationIds.has(e.source) && integrationIds.has(e.target));
+
+    const routeNodes = nodes.filter((n) => n.type === "route_group");
+    const routeIds = new Set(routeNodes.map((n) => n.id));
+    const routeEdges = edges.filter((e) => routeIds.has(e.source) && routeIds.has(e.target));
+
+    return {
+      feature: { nodes: featureNodes, edges: featureEdges },
+      integration: { nodes: integrationNodes, edges: integrationEdges },
+      route: { nodes: routeNodes, edges: routeEdges },
+    };
+  }, [doc]);
+
+  const hasArchData = archData.feature.nodes.length > 0 || archData.integration.nodes.length > 0 || archData.route.nodes.length > 0;
 
   return (
     <div className="space-y-6">
@@ -109,6 +150,10 @@ export function AppDocPage() {
           </div>
         </div>
       </section>
+
+      {doc && (
+        <StalenessBar generatedAt={doc.generated_at} repoId={repoId} />
+      )}
 
       {hasError && (
         <Alert variant="error">
@@ -310,6 +355,82 @@ export function AppDocPage() {
                   <CujCard key={cuj.id} cuj={cuj} />
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* All Routes */}
+          {allRoutes.length > 0 && (
+            <section className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <button
+                onClick={() => setRoutesExpanded(!routesExpanded)}
+                className="flex w-full items-center justify-between p-4 text-left"
+              >
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  All Routes ({allRoutes.length})
+                </h2>
+                <span className="text-slate-400">{routesExpanded ? "\u25B2" : "\u25BC"}</span>
+              </button>
+              {routesExpanded && (
+                <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+                  <RouteTable routes={allRoutes} />
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Architecture Diagrams */}
+          {hasArchData && (
+            <section>
+              <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Architecture
+              </h2>
+              <div className="mb-3 flex gap-1">
+                {archData.feature.nodes.length > 0 && (
+                  <button
+                    onClick={() => setArchTab("feature")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      archTab === "feature"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    Feature Map
+                  </button>
+                )}
+                {archData.integration.nodes.length > 0 && (
+                  <button
+                    onClick={() => setArchTab("integration")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      archTab === "integration"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    Integration Map
+                  </button>
+                )}
+                {archData.route.nodes.length > 0 && (
+                  <button
+                    onClick={() => setArchTab("route")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      archTab === "route"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    Route Graph
+                  </button>
+                )}
+              </div>
+              {archTab === "feature" && archData.feature.nodes.length > 0 && (
+                <FeatureMapDiagram nodes={archData.feature.nodes} edges={archData.feature.edges} />
+              )}
+              {archTab === "integration" && archData.integration.nodes.length > 0 && (
+                <IntegrationMapDiagram nodes={archData.integration.nodes} edges={archData.integration.edges} />
+              )}
+              {archTab === "route" && archData.route.nodes.length > 0 && (
+                <RouteGraphDiagram nodes={archData.route.nodes} edges={archData.route.edges} />
+              )}
             </section>
           )}
         </>

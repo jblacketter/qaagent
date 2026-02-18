@@ -24,23 +24,24 @@ qaagent doctor
 
 > **Tip:** Add `[llm]` for LLM-enhanced test generation, `[mcp]` for AI agent integration, or `[perf]` for performance testing. All features work without these — they just unlock additional capabilities.
 
-## 2. Start the Servers
-
-QA Agent has two servers: a **Web UI** (the dashboard you interact with) and an **API** (the backend that runs analysis). Start both:
+## 2. Start the Web UI
 
 ```bash
-# Terminal 1 — Start the API server
-qaagent api --port 8000
-
-# Terminal 2 — Start the Web UI
-qaagent web-ui --port 8080
+# Start the web UI (includes API + WebSocket)
+qaagent ui --port 8080
 ```
 
-Your browser opens automatically to `http://localhost:8080`. You'll see the landing page.
+Your browser opens automatically to `http://localhost:8080`.
 
-> **Single-terminal alternative:** The web UI can also run standalone — it includes its own API layer via WebSocket for real-time command execution. But running both gives you the full dashboard experience with trends, risk explorer, and CUJ tracking.
+> **Standalone API:** If you only need the REST API (for CI or headless use), run `qaagent api --port 8000` instead.
 
-## 3. Add Your First Project
+## 3. Create an Admin Account
+
+On first launch, you'll be redirected to `/setup-admin`. Create a username and password — this enables session-based authentication for the dashboard. All subsequent requests require login via `/login`.
+
+> **Note:** When no users exist, auth is bypassed so the setup page is accessible.
+
+## 4. Add Your First Project
 
 From the landing page, click **Get Started** (or navigate to `/setup`).
 
@@ -62,7 +63,7 @@ From the landing page, click **Get Started** (or navigate to `/setup`).
 
 Your project now appears on the **Repositories** page (`/repositories`).
 
-## 4. Run Analysis
+## 5. Run Analysis
 
 From the Repositories page:
 1. Click your project card
@@ -83,7 +84,7 @@ graph LR
 
 When complete, the status changes to **Ready** and you can explore results.
 
-## 5. Explore the Dashboard
+## 6. Explore the Dashboard
 
 Navigate to `/dashboard` to see your project's health at a glance.
 
@@ -106,12 +107,13 @@ A timeline of past analysis runs — click any run to see its full details.
 ### Export
 Use the **Export** menu (top-right) to download results as PDF, CSV, or JSON.
 
-## 6. Navigate the UI
+## 7. Navigate the UI
 
 The sidebar provides access to all views:
 
 | Page | Path | What You'll Find |
 |------|------|-----------------|
+| **Login** | `/login` | Session authentication |
 | **Dashboard** | `/dashboard` | KPIs, top risks, coverage gaps, recommendations |
 | **Runs** | `/runs` | All analysis runs with search and filtering |
 | **Run Details** | `/runs/{id}` | Deep dive into a single run's findings |
@@ -314,16 +316,22 @@ Four charts track your project health over time:
 ### App Documentation (`/doc`)
 
 Auto-generated documentation of your application:
+- **Staleness Bar** — shows doc freshness (Fresh / Aging / Stale) with auto-regenerate button
+- **Overview** — AI-enhanced app summary with structured sections
 - **Features** — routes grouped by tag/prefix, CRUD operations detected
 - **Integrations** — external services detected from imports and env vars
 - **CUJs** — critical user journeys discovered from route patterns
-- **Architecture** — interactive graph showing how features connect to integrations
+- **All Routes** — expandable table aggregating every route across features
+- **Architecture Diagrams** — tabbed section with three interactive views:
+  - **Feature Map** — how features relate to each other
+  - **Integration Map** — features connected to external services
+  - **Route Graph** — route groups and their dependencies
 
-Click **Regenerate** to update documentation after code changes.
+Click **Regenerate** or use the Staleness Bar button to update documentation after code changes.
 
 ### Architecture Graph (`/doc/architecture`)
 
-An interactive node diagram powered by React Flow. Nodes represent features and integrations; edges show dependencies. Drag nodes to rearrange, zoom to explore.
+A dedicated full-page interactive node diagram powered by React Flow. Nodes represent features and integrations; edges show dependencies. Drag nodes to rearrange, zoom to explore.
 
 ## Quick Reference: UI vs CLI
 

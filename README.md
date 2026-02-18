@@ -16,6 +16,8 @@ A Python QA automation framework that discovers API routes, assesses risks, gene
 - **Coverage Gap Analysis** - Identify untested routes by comparing OpenAPI specs against JUnit artifacts
 - **CI/CD Generation** - Generate GitHub Actions and GitLab CI pipeline templates
 - **Reporting** - Markdown/HTML reports, interactive dashboards, executive summaries
+- **Web Dashboard** - React-based UI with session auth, repo management, real-time analysis via WebSocket, and interactive architecture diagrams
+- **REST API** - Standalone FastAPI server with auth middleware for headless/CI integration
 - **MCP Server** - Expose QA tools to AI agents via Model Context Protocol
 - **LLM Integration** - Optional LLM enhancement via Ollama (local) or cloud APIs (Claude, GPT) through litellm
 
@@ -224,6 +226,20 @@ qaagent summarize --out reports/summary.md
 qaagent open-report --path reports/findings.html
 ```
 
+### Web Dashboard
+
+```bash
+# Start the web UI (serves React dashboard + API + WebSocket)
+qaagent ui --port 8080
+
+# Or run the standalone REST API only (for headless/CI use)
+qaagent api --port 8000
+```
+
+On first launch, you'll be prompted to create an admin account. The dashboard provides repo management, real-time analysis progress, risk explorer, trend charts, and interactive app documentation with architecture diagrams.
+
+See [UI Getting Started](docs/UI_GETTING_STARTED.md) for a full walkthrough.
+
 ### Additional Tools
 
 ```bash
@@ -324,6 +340,15 @@ src/qaagent/
     models.py               # Pydantic config models (QAAgentProfile, etc.)
     loader.py               # Config discovery and loading
     templates.py            # Config templates (generic, fastapi, nextjs)
+  api/
+    app.py                  # Standalone FastAPI REST API
+    middleware.py           # Shared auth middleware (session-based)
+    routes/                 # API route modules (runs, repos, doc, auth, settings, etc.)
+  dashboard/
+    frontend/               # React + Vite + Tailwind dashboard
+      src/pages/            #   Page components (Dashboard, Risks, Trends, AppDoc, etc.)
+      src/components/       #   Reusable UI components (charts, doc diagrams, etc.)
+  web_ui.py                 # Web UI server (React dashboard + WebSocket + API)
   llm.py                    # Multi-provider LLM client via litellm
   mcp_server.py             # MCP server exposing 11 QA tools
   templates/                # Jinja2 templates (Playwright, CI/CD, unit tests)
