@@ -124,6 +124,56 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         );
+
+        -- Branch Board tables (phase 25)
+        CREATE TABLE IF NOT EXISTS branches (
+            id              INTEGER PRIMARY KEY,
+            repo_id         TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+            branch_name     TEXT NOT NULL,
+            base_branch     TEXT DEFAULT 'main',
+            stage           TEXT DEFAULT 'created',
+            story_id        TEXT,
+            story_url       TEXT,
+            notes           TEXT,
+            change_summary  TEXT,
+            commit_count    INTEGER DEFAULT 0,
+            files_changed   INTEGER DEFAULT 0,
+            first_seen_at   TEXT,
+            last_updated_at TEXT,
+            merged_at       TEXT,
+            UNIQUE(repo_id, branch_name)
+        );
+
+        CREATE TABLE IF NOT EXISTS branch_checklists (
+            id           INTEGER PRIMARY KEY,
+            branch_id    INTEGER REFERENCES branches(id) ON DELETE CASCADE,
+            generated_at TEXT,
+            format       TEXT DEFAULT 'checklist',
+            source_diff  TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS branch_checklist_items (
+            id           INTEGER PRIMARY KEY,
+            checklist_id INTEGER REFERENCES branch_checklists(id) ON DELETE CASCADE,
+            description  TEXT NOT NULL,
+            category     TEXT,
+            priority     TEXT DEFAULT 'medium',
+            status       TEXT DEFAULT 'pending',
+            notes        TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS branch_test_runs (
+            id                     INTEGER PRIMARY KEY,
+            branch_id              INTEGER REFERENCES branches(id) ON DELETE CASCADE,
+            run_id                 TEXT,
+            suite_type             TEXT,
+            total                  INTEGER DEFAULT 0,
+            passed                 INTEGER DEFAULT 0,
+            failed                 INTEGER DEFAULT 0,
+            skipped                INTEGER DEFAULT 0,
+            promoted_to_regression INTEGER DEFAULT 0,
+            run_at                 TEXT
+        );
     """)
 
 
@@ -175,6 +225,25 @@ def repo_list() -> List[Dict[str, Any]]:
 
 def repo_delete(repo_id: str) -> bool:
     conn = get_db()
+    # Explicitly remove branch data first so deletion works even on
+    # databases created before ON DELETE CASCADE was added to the schema.
+    conn.execute(
+        "DELETE FROM branch_checklist_items WHERE checklist_id IN "
+        "(SELECT id FROM branch_checklists WHERE branch_id IN "
+        "(SELECT id FROM branches WHERE repo_id = ?))",
+        (repo_id,),
+    )
+    conn.execute(
+        "DELETE FROM branch_checklists WHERE branch_id IN "
+        "(SELECT id FROM branches WHERE repo_id = ?)",
+        (repo_id,),
+    )
+    conn.execute(
+        "DELETE FROM branch_test_runs WHERE branch_id IN "
+        "(SELECT id FROM branches WHERE repo_id = ?)",
+        (repo_id,),
+    )
+    conn.execute("DELETE FROM branches WHERE repo_id = ?", (repo_id,))
     cur = conn.execute("DELETE FROM repositories WHERE id = ?", (repo_id,))
     conn.commit()
     return cur.rowcount > 0

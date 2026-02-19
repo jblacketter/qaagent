@@ -5,6 +5,7 @@
     "analyze",
     "api",
     "api-detect",
+    "branch",
     "config",
     "dashboard",
     "doc",
@@ -39,6 +40,12 @@
     "workspace"
   ],
   "subgroups": {
+    "branch": [
+      "list",
+      "show",
+      "track",
+      "update"
+    ],
     "analyze": [
       "collectors",
       "coverage-gaps",

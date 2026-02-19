@@ -55,7 +55,7 @@ if dashboard_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
 
 # Mount API routers used by the React dashboard
-from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings
+from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings, branches
 app.include_router(auth.router, prefix="/api")
 app.include_router(repositories.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
@@ -64,6 +64,7 @@ app.include_router(fix.router, prefix="/api")
 app.include_router(doc.router, prefix="/api")
 app.include_router(agent.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
+app.include_router(branches.router, prefix="/api")
 
 
 class TargetInput(BaseModel):

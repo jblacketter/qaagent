@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from qaagent.api.middleware import AuthMiddleware
-from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings
+from qaagent.api.routes import runs, evidence, repositories, fix, doc, agent, auth, settings, branches
 
 
 def create_app() -> FastAPI:
@@ -38,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(agent.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
     app.include_router(settings.router, prefix="/api")
+    app.include_router(branches.router, prefix="/api")
     return app
 
 

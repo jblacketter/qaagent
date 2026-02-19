@@ -61,6 +61,10 @@ def clear_database() -> dict[str, str]:
     """Reset all repositories, agent configs, and usage data."""
     conn = db.get_db()
     conn.executescript("""
+        DELETE FROM branch_checklist_items;
+        DELETE FROM branch_checklists;
+        DELETE FROM branch_test_runs;
+        DELETE FROM branches;
         DELETE FROM repositories;
         DELETE FROM agent_configs;
         DELETE FROM agent_usage;

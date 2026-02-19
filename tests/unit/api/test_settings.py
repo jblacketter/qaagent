@@ -71,6 +71,22 @@ def test_clear_database(client):
     assert usage["requests"] == 0
 
 
+def test_clear_database_with_branch_data(client):
+    """Clear database succeeds even when branch data exists (regression)."""
+    db.repo_upsert("test-repo", "Test Repo", "/tmp/test", "local")
+    conn = db.get_db()
+    conn.execute(
+        "INSERT INTO branches (repo_id, branch_name, stage) VALUES ('test-repo', 'feature/X', 'active')"
+    )
+    conn.commit()
+
+    resp = client.post("/api/settings/clear-database")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cleared"
+    assert db.repo_list() == []
+    assert conn.execute("SELECT COUNT(*) as c FROM branches").fetchone()["c"] == 0
+
+
 # ---- POST /api/auth/change-password ----
 
 def test_change_password_success(client):

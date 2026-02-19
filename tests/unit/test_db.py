@@ -59,6 +59,37 @@ class TestRepoCRUD:
     def test_delete_missing(self):
         assert db.repo_delete("nope") is False
 
+    def test_delete_cascades_branch_data(self):
+        """Deleting a repo must remove all associated branch data."""
+        db.repo_upsert("r1", "R1", "/r1")
+        conn = db.get_db()
+        # Create a branch, checklist, checklist item, and test run
+        conn.execute(
+            "INSERT INTO branches (repo_id, branch_name, stage) VALUES ('r1', 'feature/X', 'active')"
+        )
+        branch_id = conn.execute("SELECT id FROM branches WHERE repo_id = 'r1'").fetchone()["id"]
+        conn.execute(
+            "INSERT INTO branch_checklists (branch_id, format) VALUES (?, 'checklist')",
+            (branch_id,),
+        )
+        cl_id = conn.execute("SELECT id FROM branch_checklists WHERE branch_id = ?", (branch_id,)).fetchone()["id"]
+        conn.execute(
+            "INSERT INTO branch_checklist_items (checklist_id, description) VALUES (?, 'test item')",
+            (cl_id,),
+        )
+        conn.execute(
+            "INSERT INTO branch_test_runs (branch_id, suite_type, total, passed) VALUES (?, 'pytest', 5, 5)",
+            (branch_id,),
+        )
+        conn.commit()
+
+        # Delete repo — must not raise, must cascade
+        assert db.repo_delete("r1") is True
+        assert conn.execute("SELECT COUNT(*) as c FROM branches").fetchone()["c"] == 0
+        assert conn.execute("SELECT COUNT(*) as c FROM branch_checklists").fetchone()["c"] == 0
+        assert conn.execute("SELECT COUNT(*) as c FROM branch_checklist_items").fetchone()["c"] == 0
+        assert conn.execute("SELECT COUNT(*) as c FROM branch_test_runs").fetchone()["c"] == 0
+
     def test_update_status(self):
         db.repo_upsert("r1", "R1", "/r1")
         db.repo_update_status("r1", "error", last_scan="2025-01-01", run_count=3)

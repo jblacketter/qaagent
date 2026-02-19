@@ -24,6 +24,7 @@ from .workspace_cmd import workspace_app
 from .doc_cmd import doc_app
 from .rules_cmd import rules_app
 from .rag_cmd import rag_app
+from .branch_cmd import branch_app
 
 # Register subgroups
 app.add_typer(analyze_app, name="analyze")
@@ -35,6 +36,7 @@ app.add_typer(workspace_app, name="workspace")
 app.add_typer(doc_app, name="doc")
 app.add_typer(rules_app, name="rules")
 app.add_typer(rag_app, name="rag")
+app.add_typer(branch_app, name="branch")
 
 # Dual-registered commands (available both as top-level and within subgroups)
 app.command("use")(use_target)
