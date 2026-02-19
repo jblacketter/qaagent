@@ -122,6 +122,7 @@ The sidebar provides access to all views:
 | **Trends** | `/trends` | Historical charts (coverage, risk bands, scores) |
 | **App Docs** | `/doc` | Auto-generated feature map, integrations, CUJs |
 | **Architecture** | `/doc/architecture` | Interactive node graph of your app structure |
+| **Branch Board** | `/branches` | Kanban board for branch lifecycle tracking |
 | **Settings** | `/settings` | Configuration and CUJ management |
 
 ## How QA Agent Works
@@ -188,6 +189,17 @@ graph TB
         CGA --> DB
         DA --> DB
         REP --> PDF
+    end
+
+    subgraph BranchBoard["Branch Board"]
+        BT[Branch Tracker]
+        BC[Test Checklist<br/>from Diffs]
+        BTG[Branch Test<br/>Generation]
+        RD --> BT
+        BT --> BC
+        BC --> BTG
+        BTG --> OR
+        BT --> DB
     end
 
     subgraph Documentation["App Documentation"]
@@ -333,6 +345,16 @@ Click **Regenerate** or use the Staleness Bar button to update documentation aft
 
 A dedicated full-page interactive node diagram powered by React Flow. Nodes represent features and integrations; edges show dependencies. Drag nodes to rearrange, zoom to explore.
 
+### Branch Board (`/branches`)
+
+Track branch lifecycle from creation to release:
+- **Kanban View** — columns for each stage: Created, Active, In Review, Merged, QA, Released
+- **Test Checklists** — auto-generated from code diffs when a branch is tracked
+- **Automated Testing** — generate and run tests per branch with one click
+- **Promote to Regression** — move passing branch tests into the main regression suite
+
+CLI equivalents: `qaagent branch track <name>`, `qaagent branch list`, `qaagent branch scan`, `qaagent branch checklist <name>`, `qaagent branch generate-tests <name>`, `qaagent branch run-tests <name>`.
+
 ## Quick Reference: UI vs CLI
 
 Every UI action has a CLI equivalent:
@@ -352,6 +374,10 @@ Every UI action has a CLI equivalent:
 | View app docs | `qaagent doc show --section features` |
 | Build RAG index | `qaagent rag index` |
 | Export docs | `qaagent doc export --format markdown --output docs.md` |
+| Track branch | `qaagent branch track <name>` |
+| View branch board | `qaagent branch list` |
+| Branch test checklist | `qaagent branch checklist <name>` |
+| Run branch tests | `qaagent branch run-tests <name>` |
 
 ## Connecting to AI Agents (MCP)
 

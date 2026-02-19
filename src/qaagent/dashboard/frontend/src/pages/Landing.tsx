@@ -11,6 +11,7 @@ import {
   FolderOpen,
   BookOpen,
   FileCode,
+  GitBranch,
 } from "lucide-react";
 import { apiClient } from "../services/api";
 
@@ -88,6 +89,12 @@ export function LandingPage() {
             description="Generate unit tests for discovered routes and endpoints, with customizable base URLs and output directories."
             color="amber"
           />
+          <FeatureCard
+            icon={<GitBranch className="h-8 w-8" />}
+            title="Branch Board"
+            description="Track branches from creation to release with auto-generated test checklists, automated test execution, and a kanban-style board view."
+            color="cyan"
+          />
         </div>
 
         {/* CTA Section */}
@@ -149,6 +156,10 @@ export function LandingPage() {
               <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
               <span>How quality metrics are trending over time as you make improvements</span>
             </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
+              <span>Branch lifecycle tracking with auto-generated test checklists and automated test execution</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -160,7 +171,7 @@ interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  color: "blue" | "red" | "green" | "orange" | "purple" | "teal" | "indigo" | "amber";
+  color: "blue" | "red" | "green" | "orange" | "purple" | "teal" | "indigo" | "amber" | "cyan";
 }
 
 function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
@@ -173,6 +184,7 @@ function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
     teal: "text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20",
     indigo: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20",
     amber: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20",
+    cyan: "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20",
   };
 
   return (

@@ -25,6 +25,7 @@
 - **Phase 13: Live DOM Inspection** — `analyze dom` command for Playwright-based selector coverage analysis (inventory, forms, nav links, and recommendations)
 - **Phase 14: Live UI Route Crawling** — `analyze routes --crawl` for Playwright-based runtime UI route discovery with depth/page bounds and profile-aware auth/session defaults
 - **Phase 15: AI-Assisted Test Recording** — `qaagent record` for browser flow capture and export to Playwright/Behave test assets with selector ranking and sensitive input redaction
+- **Phase 25: Branch Board** — Branch lifecycle tracker with kanban board UI, auto-generated test checklists from code diffs, automated test generation/execution per branch, and promote-to-regression workflow
 
 ## Upcoming Phases
 

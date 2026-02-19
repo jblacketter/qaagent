@@ -18,6 +18,7 @@ This document captures current capabilities and the plan so we can resume work s
 - **Phase 13 — Live DOM Inspection (NEW)**: `qaagent analyze dom` for Playwright-based DOM inventory, selector coverage analysis, form/nav extraction, and actionable selector strategy recommendations.
 - **Phase 14 — Live UI Route Crawling (NEW)**: `qaagent analyze routes --crawl` for Playwright-based runtime UI route discovery with depth/page/link limits and profile-aware auth/session defaults.
 - **Phase 15 — AI-Assisted Test Recording (NEW)**: `qaagent record` for browser interaction capture to `recording.json` plus Playwright/Behave exports with deterministic selector ranking and sensitive input redaction.
+- **Phase 25 — Branch Board (NEW)**: Branch lifecycle tracker with kanban board view. `qaagent branch track/list/scan/checklist/generate-tests/run-tests` for tracking branches through stages (created → active → in_review → merged → qa → released), auto-generating test checklists from diffs, and running automated tests per branch.
 - MCP server: pytest_run, schemathesis_run (with coverage meta), generate_report_tool, detect_openapi, a11y_run, lighthouse_audit.
 - Findings report: Aggregates JUnit + artifacts; includes API coverage, A11y violations by impact, Lighthouse scores/metrics, Locust perf summary.
 - Tests: smoke/version, OpenAPI parsing, report HTML generation, extras summarization.

@@ -48,7 +48,8 @@ The dashboard follows a repository-centric workflow:
 2. **Repository Setup** (`/setup`) - Add new repositories (local or GitHub) with analysis options
 3. **Repositories List** (`/repositories`) - Manage all repositories, trigger re-scans, view dashboards
 4. **Dashboard** (`/dashboard?repo=X`) - Per-repository metrics, risk overview, and quality trends
-5. **Risks Explorer** (`/risks?run=X&risk=Y`) - Deep dive into risks with:
+5. **Branch Board** (`/branches`) - Track branch lifecycle with kanban view, auto-generated test checklists from diffs, and per-branch test execution
+6. **Risks Explorer** (`/risks?run=X&risk=Y`) - Deep dive into risks with:
    - Collapsible severity sections (Critical → High → Medium → Low)
    - Detailed risk explanations with specific security issues to investigate
    - Actionable recommendations with tools to run and next steps
@@ -60,6 +61,7 @@ The dashboard follows a repository-centric workflow:
 - **Risk Prioritization** - Risks grouped by severity and sorted by score
 - **Actionable Insights** - Specific guidance on what to investigate and how to fix issues
 - **Critical User Journey Coverage** - Track test coverage across key user workflows
+- **Branch Board** - Kanban-style branch lifecycle tracking with auto-generated test checklists
 - **Dark Mode Support** - Theme preferences stored in localStorage
 - **Real-time Updates** - React Query for efficient data fetching and caching
 
