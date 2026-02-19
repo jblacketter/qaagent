@@ -18,6 +18,7 @@ import { FeatureDetailPage } from "./pages/FeatureDetail";
 import { IntegrationsPage } from "./pages/Integrations";
 import { ArchitecturePage } from "./pages/Architecture";
 import { AgentPage } from "./pages/Agent";
+import { BranchBoardPage } from "./pages/BranchBoard";
 import { LoginPage } from "./pages/Login";
 import { SetupAdminPage } from "./pages/SetupAdmin";
 
@@ -82,6 +83,7 @@ function App() {
             <Route path="/doc/integrations" element={<IntegrationsPage />} />
             <Route path="/doc/architecture" element={<ArchitecturePage />} />
             <Route path="/agent" element={<AgentPage />} />
+            <Route path="/branch-board" element={<BranchBoardPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Routes>
         </Layout>

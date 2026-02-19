@@ -41,7 +41,10 @@
   ],
   "subgroups": {
     "branch": [
+      "checklist",
+      "generate-tests",
       "list",
+      "run-tests",
       "show",
       "track",
       "update"

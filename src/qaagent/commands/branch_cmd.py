@@ -135,6 +135,170 @@ def branch_show(
             console.print(f"    [{status_icon}] [{priority_color}]{item.description}[/{priority_color}]")
 
 
+@branch_app.command("checklist")
+def branch_checklist(
+    branch_name: str = typer.Argument(..., help="Branch name to generate checklist for"),
+    repo_path: str = typer.Option(".", help="Path to the git repository"),
+    repo_id: Optional[str] = typer.Option(None, help="Repository ID"),
+    base_branch: str = typer.Option("main", help="Base branch to diff against"),
+):
+    """Generate a test checklist from the branch diff."""
+    from qaagent.branch.diff_analyzer import DiffAnalyzer
+    from qaagent.branch.checklist_generator import generate_checklist
+    from qaagent.branch import store
+
+    path = Path(repo_path).resolve()
+    if not (path / ".git").exists():
+        console.print(f"[red]Not a git repository: {path}[/red]")
+        raise typer.Exit(code=1)
+
+    resolved_id = repo_id or path.name.lower().replace(" ", "-")
+
+    # Find the branch card
+    card = store.branch_get_by_name(resolved_id, branch_name)
+    if card is None:
+        console.print(f"[yellow]Branch '{branch_name}' not tracked. Run 'branch track' first.[/yellow]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[cyan]Analyzing diff for {branch_name} vs {base_branch}...[/cyan]")
+
+    analyzer = DiffAnalyzer(path, base_branch)
+    diff = analyzer.analyze(branch_name)
+
+    console.print(f"  Files changed: {len(diff.files)}")
+    console.print(f"    Routes:     {len(diff.route_files)}")
+    console.print(f"    Tests:      {len(diff.test_files)}")
+    console.print(f"    Config:     {len(diff.config_files)}")
+    console.print(f"    Migrations: {len(diff.migration_files)}")
+    console.print(f"    Other:      {len(diff.other_files)}")
+    console.print(f"  Lines: +{diff.total_additions} / -{diff.total_deletions}")
+
+    checklist = generate_checklist(diff, branch_id=card.id)
+
+    # Persist checklist
+    checklist_id = store.checklist_create(checklist)
+
+    console.print(f"\n[green]Generated checklist ({len(checklist.items)} items)[/green]")
+
+    # Group by category for display
+    by_category: dict[str, list] = {}
+    for item in checklist.items:
+        cat = item.category or "other"
+        by_category.setdefault(cat, []).append(item)
+
+    category_labels = {
+        "route_change": "Route Changes",
+        "data_integrity": "Data Integrity",
+        "config": "Configuration",
+        "regression": "Regression",
+        "new_code": "New Code",
+        "edge_case": "Edge Cases",
+    }
+
+    for cat, items in by_category.items():
+        label = category_labels.get(cat, cat.replace("_", " ").title())
+        console.print(f"\n  [bold]{label}[/bold]")
+        for item in items:
+            priority_color = {"high": "red", "medium": "yellow", "low": "dim"}.get(item.priority, "white")
+            console.print(f"    [ ] [{priority_color}]{item.description}[/{priority_color}]")
+
+
+@branch_app.command("generate-tests")
+def branch_generate_tests(
+    branch_id: int = typer.Argument(..., help="Branch card ID"),
+    repo_path: Optional[str] = typer.Option(None, help="Override repository path"),
+    base_url: str = typer.Option("http://localhost:8000", help="Base URL for generated tests"),
+):
+    """Generate automated tests from routes changed in a branch."""
+    from qaagent.branch import store
+    from qaagent.branch.test_executor import generate_branch_tests
+    from qaagent import db
+
+    card = store.branch_get(branch_id)
+    if card is None:
+        console.print(f"[red]Branch card #{branch_id} not found.[/red]")
+        raise typer.Exit(code=1)
+
+    # Resolve repo path
+    if repo_path:
+        path = Path(repo_path).resolve()
+    else:
+        repo = db.repo_get(card.repo_id)
+        if repo is None:
+            console.print(f"[red]Repository '{card.repo_id}' not found in DB.[/red]")
+            raise typer.Exit(code=1)
+        path = Path(repo["path"])
+
+    if not (path / ".git").exists():
+        console.print(f"[red]Not a git repository: {path}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[cyan]Generating tests for branch '{card.branch_name}'...[/cyan]")
+
+    result = generate_branch_tests(
+        repo_path=path,
+        branch_name=card.branch_name,
+        branch_id=card.id,
+        base_branch=card.base_branch,
+        base_url=base_url,
+    )
+
+    if result.warnings:
+        for w in result.warnings:
+            console.print(f"  [yellow]Warning: {w}[/yellow]")
+
+    if result.files_generated:
+        console.print(f"[green]Generated {result.test_count} tests in {result.files_generated} file(s)[/green]")
+        console.print(f"  Output: {result.output_dir}")
+    else:
+        console.print("[yellow]No tests generated. Check warnings above.[/yellow]")
+
+
+@branch_app.command("run-tests")
+def branch_run_tests(
+    branch_id: int = typer.Argument(..., help="Branch card ID"),
+):
+    """Run previously generated tests for a branch."""
+    from qaagent.branch import store
+    from qaagent.branch.test_executor import run_branch_tests
+    from qaagent.branch.models import BranchTestRun
+
+    card = store.branch_get(branch_id)
+    if card is None:
+        console.print(f"[red]Branch card #{branch_id} not found.[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[cyan]Running tests for branch '{card.branch_name}'...[/cyan]")
+
+    try:
+        result = run_branch_tests(card.id)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    # Store the result
+    run = BranchTestRun(
+        branch_id=card.id,
+        run_id=result.run_id,
+        suite_type=result.suite_type,
+        total=result.total,
+        passed=result.passed,
+        failed=result.failed,
+        skipped=result.skipped,
+    )
+    store.test_run_create(run)
+
+    # Display results
+    pass_pct = (result.passed / result.total * 100) if result.total > 0 else 0
+    color = "green" if result.failed == 0 else "red"
+    console.print(f"\n[{color}]Results: {result.passed}/{result.total} passed ({pass_pct:.0f}%)[/{color}]")
+    if result.failed > 0:
+        console.print(f"  [red]{result.failed} failed[/red]")
+    if result.skipped > 0:
+        console.print(f"  [yellow]{result.skipped} skipped[/yellow]")
+    console.print(f"  Run ID: {result.run_id}")
+
+
 @branch_app.command("update")
 def branch_update_cmd(
     branch_id: int = typer.Argument(..., help="Branch card ID"),

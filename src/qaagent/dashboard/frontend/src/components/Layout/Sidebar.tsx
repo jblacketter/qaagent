@@ -12,11 +12,13 @@ import {
   Target,
   BookOpen,
   Bot,
+  GitBranch,
 } from "lucide-react";
 
 const mainLinks = [
   { to: "/", label: "Home", icon: Home },
   { to: "/repositories", label: "Repositories", icon: FolderOpen },
+  { to: "/branch-board", label: "Branch Board", icon: GitBranch },
   { to: "/about", label: "About", icon: Info },
 ];
 

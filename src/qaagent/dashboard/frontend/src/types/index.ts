@@ -234,6 +234,68 @@ export interface AgentAnalysis {
   generated_at: string;
 }
 
+// Branch Board types
+export interface BranchCard {
+  id: number;
+  repo_id: string;
+  branch_name: string;
+  base_branch: string;
+  stage: string;
+  story_id: string | null;
+  story_url: string | null;
+  notes: string | null;
+  change_summary: string | null;
+  commit_count: number;
+  files_changed: number;
+  first_seen_at: string | null;
+  last_updated_at: string | null;
+  merged_at: string | null;
+}
+
+export interface BranchChecklistItem {
+  id: number;
+  checklist_id: number;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface BranchChecklist {
+  id: number;
+  branch_id: number;
+  generated_at: string;
+  format: string;
+  source_diff_hash: string;
+  items: BranchChecklistItem[];
+}
+
+export interface BranchTestRun {
+  id: number;
+  branch_id: number;
+  run_id: string;
+  suite_type: string;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  promoted_to_regression: boolean;
+  run_at: string;
+}
+
+export interface BranchGenerateResult {
+  files_generated: number;
+  test_count: number;
+  output_dir: string;
+  warnings: string[];
+}
+
+export interface BranchStageInfo {
+  value: string;
+  auto: boolean;
+}
+
 export interface AppDocumentation {
   app_name: string;
   summary: string;

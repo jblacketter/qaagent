@@ -17,6 +17,11 @@ import type {
   DiscoveredCUJ,
   ArchitectureNode,
   ArchitectureEdge,
+  BranchCard,
+  BranchChecklist,
+  BranchTestRun,
+  BranchStageInfo,
+  BranchGenerateResult,
 } from "../types";
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -194,6 +199,81 @@ export class QAAgentAPI {
 
   async resetAgentUsage(repoId: string): Promise<{ status: string }> {
     return this.request(this._agentQuery(`/api/agent/usage`, repoId), { method: "DELETE" });
+  }
+
+  // Branch Board
+  async getBranches(repoId?: string, stage?: string): Promise<{ branches: BranchCard[] }> {
+    const params = new URLSearchParams();
+    if (repoId) params.set("repo_id", repoId);
+    if (stage) params.set("stage", stage);
+    const qs = params.toString();
+    return this.request(`/api/branches${qs ? `?${qs}` : ""}`);
+  }
+
+  async getBranch(branchId: number): Promise<BranchCard> {
+    return this.request(`/api/branches/${branchId}`);
+  }
+
+  async updateBranch(
+    branchId: number,
+    update: Partial<{ stage: string; story_id: string; story_url: string; notes: string }>,
+  ): Promise<BranchCard> {
+    return this.request(`/api/branches/${branchId}`, {
+      method: "PATCH",
+      body: JSON.stringify(update),
+    });
+  }
+
+  async deleteBranch(branchId: number): Promise<{ status: string; id: number }> {
+    return this.request(`/api/branches/${branchId}`, { method: "DELETE" });
+  }
+
+  async scanBranches(
+    repoId: string,
+    repoPath: string,
+    baseBranch = "main",
+  ): Promise<{ branches: BranchCard[]; count: number }> {
+    const params = new URLSearchParams({ repo_id: repoId, repo_path: repoPath, base_branch: baseBranch });
+    return this.request(`/api/branches/scan?${params}`, { method: "POST" });
+  }
+
+  async generateChecklist(branchId: number): Promise<{ checklist: BranchChecklist; diff_summary: Record<string, number> }> {
+    return this.request(`/api/branches/${branchId}/checklist/generate`, { method: "POST" });
+  }
+
+  async getChecklist(branchId: number): Promise<{ checklist: BranchChecklist | null }> {
+    return this.request(`/api/branches/${branchId}/checklist`);
+  }
+
+  async updateChecklistItem(
+    itemId: number,
+    status: string,
+    notes?: string,
+  ): Promise<{ status: string; id: number }> {
+    const params = new URLSearchParams({ status });
+    if (notes) params.set("notes", notes);
+    return this.request(`/api/branches/checklist-items/${itemId}?${params}`, { method: "PATCH" });
+  }
+
+  async generateTests(branchId: number, baseUrl = "http://localhost:8000"): Promise<BranchGenerateResult> {
+    const params = new URLSearchParams({ base_url: baseUrl });
+    return this.request(`/api/branches/${branchId}/generate-tests?${params}`, { method: "POST" });
+  }
+
+  async runTests(branchId: number): Promise<{ test_run: BranchTestRun; summary: Record<string, number> }> {
+    return this.request(`/api/branches/${branchId}/run-tests`, { method: "POST" });
+  }
+
+  async promoteTestRun(runDbId: number): Promise<{ status: string; id: number }> {
+    return this.request(`/api/branches/test-runs/${runDbId}/promote`, { method: "PATCH" });
+  }
+
+  async getTestRuns(branchId: number): Promise<{ test_runs: BranchTestRun[] }> {
+    return this.request(`/api/branches/${branchId}/test-runs`);
+  }
+
+  async getBranchStages(): Promise<{ stages: BranchStageInfo[] }> {
+    return this.request(`/api/branches/stages`);
   }
 
   // Settings

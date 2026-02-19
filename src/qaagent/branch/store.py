@@ -263,6 +263,17 @@ def test_run_create(run: BranchTestRun) -> int:
     return cur.lastrowid  # type: ignore[return-value]
 
 
+def test_run_promote(run_db_id: int) -> bool:
+    """Mark a test run as promoted to regression. Returns True if found."""
+    conn = db.get_db()
+    cur = conn.execute(
+        "UPDATE branch_test_runs SET promoted_to_regression = 1 WHERE id = ?",
+        (run_db_id,),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def test_runs_list(branch_id: int) -> list[BranchTestRun]:
     """List test runs for a branch."""
     conn = db.get_db()
