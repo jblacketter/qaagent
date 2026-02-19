@@ -151,8 +151,9 @@ def web_ui(
             console.print("[yellow]For internet-facing deployments, use a reverse proxy with HTTPS.[/yellow]")
             console.print()
 
+        display_host = "localhost" if host == "0.0.0.0" else host
         console.print(f"[cyan]Starting QA Agent Web UI...[/cyan]")
-        console.print(f"[green]-> Server: http://{host}:{port}[/green]")
+        console.print(f"[green]-> Server: http://{display_host}:{port}[/green]")
         console.print()
         console.print("[yellow]Web UI Features:[/yellow]")
         console.print("  - Configure targets (local repos or GitHub URLs)")
@@ -169,9 +170,12 @@ def web_ui(
             import threading
             import time
 
+            # 0.0.0.0 is not a valid browser address on Windows; use localhost instead
+            browser_host = "localhost" if host == "0.0.0.0" else host
+
             def open_browser_delayed():
                 time.sleep(1.5)
-                webbrowser.open(f"http://{host}:{port}")
+                webbrowser.open(f"http://{browser_host}:{port}")
 
             threading.Thread(target=open_browser_delayed, daemon=True).start()
 

@@ -28,7 +28,7 @@ qaagent doctor
 
 ```bash
 # Start the web UI (includes API + WebSocket)
-qaagent ui --port 8080
+qaagent web-ui --port 8080
 ```
 
 Your browser opens automatically to `http://localhost:8080`.
