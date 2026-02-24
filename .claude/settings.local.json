@@ -36,7 +36,9 @@
       "WebFetch(domain:gitbook.com)",
       "WebFetch(domain:blog.sequinstream.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:practicaltypography.com)"
+      "WebFetch(domain:practicaltypography.com)",
+      "Bash(grep:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

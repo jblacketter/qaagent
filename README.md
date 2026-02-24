@@ -1,5 +1,30 @@
 # QA Agent
 
+**Part of the QA Tool Suite** — an integrated collection of AI-powered quality assurance tools.
+
+```mermaid
+graph LR
+    subgraph suite ["QA Tool Suite"]
+        direction TB
+        QA["🔍 QA Agent\nStrategy · Analysis · Test Generation"]
+        BUG["🐛 Bugalizer\nAI Bug Triage · Code Localization · Fix Proposals"]
+    end
+
+    QA -- "failed tests & risk findings" --> BUG
+    BUG -- "fix verification requests" --> QA
+
+    style suite fill:#0d1117,stroke:#30363d,color:#e6edf3
+    style QA fill:#1a2332,stroke:#58a6ff,color:#e6edf3
+    style BUG fill:#1a2332,stroke:#f78166,color:#e6edf3
+```
+
+| Tool | Purpose | Repo |
+|------|---------|------|
+| **QA Agent** | Route discovery, risk assessment, test generation & orchestration, reporting | [qaagent](https://github.com/jackblacketter/qaagent) |
+| **Bugalizer** | AI-powered bug report triage, codebase localization, fix proposals | [bugalizer](https://github.com/jackblacketter/bugalizer) |
+
+---
+
 A Python QA automation framework that discovers API routes, assesses risks, generates runnable test suites, orchestrates test execution, and produces reports. Exposes tooling via CLI (Typer) and MCP (Model Context Protocol). Local-first, works on macOS (including Apple Silicon) and Windows.
 
 ![QA Agent Dashboard](docs/qaagent.png)
