@@ -1,30 +1,5 @@
 # QA Agent
 
-**Part of the QA Tool Suite** — an integrated collection of AI-powered quality assurance tools.
-
-```mermaid
-graph LR
-    subgraph suite ["QA Tool Suite"]
-        direction TB
-        QA["🔍 QA Agent\nStrategy · Analysis · Test Generation"]
-        BUG["🐛 Bugalizer\nAI Bug Triage · Code Localization · Fix Proposals"]
-    end
-
-    QA -- "failed tests & risk findings" --> BUG
-    BUG -- "fix verification requests" --> QA
-
-    style suite fill:#0d1117,stroke:#30363d,color:#e6edf3
-    style QA fill:#1a2332,stroke:#58a6ff,color:#e6edf3
-    style BUG fill:#1a2332,stroke:#f78166,color:#e6edf3
-```
-
-| Tool | Purpose | Repo |
-|------|---------|------|
-| **QA Agent** | Route discovery, risk assessment, test generation & orchestration, reporting | [qaagent](https://github.com/jackblacketter/qaagent) |
-| **Bugalizer** | AI-powered bug report triage, codebase localization, fix proposals | [bugalizer](https://github.com/jackblacketter/bugalizer) |
-
----
-
 A Python QA automation framework that discovers API routes, assesses risks, generates runnable test suites, orchestrates test execution, and produces reports. Exposes tooling via CLI (Typer) and MCP (Model Context Protocol). Local-first, works on macOS (including Apple Silicon) and Windows.
 
 ![QA Agent Dashboard](docs/qaagent.png)
@@ -45,6 +20,17 @@ A Python QA automation framework that discovers API routes, assesses risks, gene
 - **REST API** - Standalone FastAPI server with auth middleware for headless/CI integration
 - **MCP Server** - Expose QA tools to AI agents via Model Context Protocol
 - **LLM Integration** - Optional LLM enhancement via Ollama (local) or cloud APIs (Claude, GPT) through litellm
+- **Bugalizer Integration** - Auto-submit test failures as structured bug reports to [Bugalizer](https://github.com/jblacketter/bugalizer) for AI triage
+
+## Aegis Ecosystem
+
+QA Agent is part of the **Aegis** QA Tool Suite — "The AI Quality Control Plane":
+
+| Tool | Role |
+|------|------|
+| **[Aegis](https://github.com/jblacketter/aegis)** | Orchestration layer, service registry, workflow engine, portfolio landing page |
+| **QA Agent** (this repo) | Route discovery, risk analysis, test generation & orchestration |
+| **[Bugalizer](https://github.com/jblacketter/bugalizer)** | AI-powered bug triage, code localization & fix proposals |
 
 ## System Requirements
 
@@ -203,6 +189,12 @@ qaagent run-all --parallel --max-workers 4
 
 # Full pipeline: discover -> assess -> generate -> run -> report
 qaagent plan-run --generate
+
+# Run tests and auto-submit failures to Bugalizer
+qaagent run-all --submit-bugs
+
+# Submit bugs from a previous run
+qaagent submit-bug <run-id>
 ```
 
 ### Generate App Documentation
@@ -365,6 +357,8 @@ src/qaagent/
     models.py               # Pydantic config models (QAAgentProfile, etc.)
     loader.py               # Config discovery and loading
     templates.py            # Config templates (generic, fastapi, nextjs)
+  integrations/
+    bugalizer_client.py     # Bugalizer HTTP client + payload mapping
   api/
     app.py                  # Standalone FastAPI REST API
     middleware.py           # Shared auth middleware (session-based)

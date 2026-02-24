@@ -124,6 +124,7 @@ class RunOrchestrator:
             handle.increment_count("tests_failed", result.total_failed)
             if result.diagnostic_summary:
                 handle.add_diagnostic(result.diagnostic_summary.summary_text)
+                self._persist_diagnostics(handle, result)
             if owns_handle:
                 handle.finalize()
 
@@ -377,6 +378,25 @@ class RunOrchestrator:
             writer.write_records("tests", records)
         except Exception:
             logger.warning("Could not write test records to evidence", exc_info=True)
+
+    def _persist_diagnostics(
+        self,
+        handle: RunHandle,
+        result: OrchestratorResult,
+    ) -> None:
+        """Persist per-test diagnostic records to evidence for later use."""
+        if not result.diagnostic_summary:
+            return
+        try:
+            from qaagent.integrations.bugalizer_client import persist_diagnostics
+            diag_path = persist_diagnostics(
+                handle.evidence_dir,
+                result.suites,
+                result.diagnostic_summary,
+            )
+            handle.register_evidence_file("diagnostics", diag_path)
+        except Exception:
+            logger.warning("Could not persist diagnostics to evidence", exc_info=True)
 
     def _collect_artifacts(
         self,

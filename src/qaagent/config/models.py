@@ -121,6 +121,17 @@ class DocSettings(BaseModel):
     custom_summary: Optional[str] = None
 
 
+class BugalizerSettings(BaseModel):
+    """Configuration for Bugalizer integration."""
+    enabled: bool = False
+    api_url: str = "http://localhost:8001"
+    api_key_env: str = "BUGALIZER_API_KEY"
+    project_id: Optional[str] = None
+    submit_on_failure: bool = True
+    reporter: str = "qaagent"
+    labels: List[str] = Field(default_factory=lambda: ["qaagent"])
+
+
 class QAAgentProfile(BaseModel):
     project: ProjectSettings
     app: Dict[str, EnvironmentSettings] = Field(default_factory=dict)
@@ -131,6 +142,7 @@ class QAAgentProfile(BaseModel):
     llm: Optional[LLMSettings] = None
     run: RunSettings = Field(default_factory=RunSettings)
     doc: DocSettings = Field(default_factory=DocSettings)
+    bugalizer: Optional[BugalizerSettings] = None
 
     def resolve_spec_path(self, project_root: Path) -> Optional[Path]:
         if not self.openapi.spec_path:

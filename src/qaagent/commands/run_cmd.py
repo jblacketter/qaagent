@@ -506,6 +506,11 @@ def run_all(
         min=1,
         help="Max concurrent suites when running in parallel",
     ),
+    submit_bugs: bool = typer.Option(
+        False,
+        "--submit-bugs",
+        help="Submit failed tests as bug reports to Bugalizer",
+    ),
 ):
     """Run all enabled test suites via the orchestrator."""
     from qaagent.config import load_active_profile
@@ -567,8 +572,167 @@ def run_all(
     if result.run_handle:
         console.print(f"Evidence: {result.run_handle.run_dir}")
 
+    # Submit bugs to Bugalizer if requested and configured
+    if submit_bugs and not result.success:
+        _submit_bugs_to_bugalizer(profile, result)
+
     if not result.success:
         raise typer.Exit(code=1)
+
+
+def _submit_bugs_to_bugalizer(profile, result) -> None:
+    """Submit failed test cases to Bugalizer."""
+    from qaagent.integrations.bugalizer_client import submit_failures_to_bugalizer
+
+    bugalizer = getattr(profile, "bugalizer", None)
+    if not bugalizer or not bugalizer.enabled:
+        console.print(
+            "[yellow]--submit-bugs passed but bugalizer is not enabled in config. "
+            "Add bugalizer.enabled: true to .qaagent.yaml[/yellow]"
+        )
+        return
+
+    console.print()
+    console.print("[cyan]Submitting failures to Bugalizer...[/cyan]")
+    submitted = submit_failures_to_bugalizer(
+        settings=bugalizer,
+        suites=result.suites,
+        diagnostic_summary=result.diagnostic_summary,
+    )
+
+    if submitted:
+        console.print(f"[green]Submitted {len(submitted)} bug report(s) to Bugalizer[/green]")
+        for report in submitted:
+            console.print(f"  Bug {report.get('id', '?')}: {report.get('title', 'N/A')}")
+    else:
+        console.print("[yellow]No bug reports submitted (all submissions failed or no failures)[/yellow]")
+
+
+def submit_bug(
+    run_id: str = typer.Argument(..., help="Run ID or path to evidence directory"),
+):
+    """Submit bugs from a previous run's diagnostics to Bugalizer."""
+    from qaagent.config import load_active_profile
+    from qaagent.evidence.run_manager import RunManager
+    from qaagent.integrations.bugalizer_client import (
+        load_diagnostics,
+        BugalizerClient,
+    )
+
+    try:
+        _, profile = load_active_profile()
+    except Exception:
+        console.print("[red]No active profile. Use `qaagent use <target>` first.[/red]")
+        raise typer.Exit(code=2)
+
+    bugalizer = getattr(profile, "bugalizer", None)
+    if not bugalizer or not bugalizer.enabled:
+        console.print("[red]Bugalizer integration is not enabled in config.[/red]")
+        raise typer.Exit(code=2)
+
+    # Load run evidence
+    try:
+        manager = RunManager()
+        handle = manager.load_run(run_id)
+    except FileNotFoundError:
+        console.print(f"[red]Run not found: {run_id}[/red]")
+        raise typer.Exit(code=2)
+
+    # Load persisted diagnostics, with fallback for legacy runs
+    records = load_diagnostics(handle.evidence_dir)
+    if not records:
+        console.print(f"[yellow]No diagnostics.json found in run {run_id}. "
+                       "Attempting to recompute from JUnit artifacts...[/yellow]")
+        records = _recompute_diagnostics_from_evidence(handle, profile)
+        if not records:
+            console.print("[red]No test failures found in run evidence.[/red]")
+            raise typer.Exit(code=1)
+        console.print(f"[cyan]Recomputed {len(records)} diagnostic(s) from artifacts[/cyan]")
+
+    console.print(f"[cyan]Found {len(records)} diagnostic record(s) in run {run_id}[/cyan]")
+
+    client = BugalizerClient(bugalizer)
+    submitted = 0
+    for record in records:
+        payload = {
+            "title": f"[{record.get('suite', '?')}/{record.get('category', '?')}] {record.get('test_name', '?')}",
+            "description": (
+                f"Test: {record.get('test_name', 'N/A')}\n"
+                f"Suite: {record.get('suite', 'N/A')}\n\n"
+                f"Root Cause: {record.get('root_cause', 'N/A')}\n"
+                f"Category: {record.get('category', 'N/A')}\n"
+                f"Confidence: {record.get('confidence', 0):.0%}\n\n"
+                f"Error: {record.get('error_message', 'N/A')}\n\n"
+                f"Suggestion: {record.get('suggestion', 'N/A')}"
+            ),
+            "reporter": bugalizer.reporter,
+            "project_id": bugalizer.project_id or "default",
+            "severity": {
+                "auth": "critical",
+                "assertion": "high",
+                "connection": "high",
+                "timeout": "medium",
+                "data": "medium",
+                "flaky": "low",
+            }.get(record.get("category", ""), "medium"),
+            "labels": list(bugalizer.labels) + [record.get("suite", "unknown")],
+        }
+        if record.get("route"):
+            payload["feature_area"] = record["route"]
+
+        try:
+            result = client.submit_report(payload)
+            console.print(f"  [green]Submitted:[/green] {result.get('id', '?')} - {payload['title']}")
+            submitted += 1
+        except Exception as e:
+            console.print(f"  [red]Failed:[/red] {payload['title']} - {e}")
+
+    console.print(f"\n[bold]{submitted}/{len(records)} bug report(s) submitted[/bold]")
+
+
+def _recompute_diagnostics_from_evidence(handle, profile) -> list:
+    """Recompute diagnostic records from JUnit XML artifacts for legacy runs.
+
+    Used as a fallback when diagnostics.json is missing (runs predating
+    the diagnostic persistence feature).
+    """
+    from qaagent.runners.junit_parser import parse_junit_xml
+    from qaagent.runners.diagnostics import FailureDiagnostics
+
+    diagnostics_engine = FailureDiagnostics(
+        llm_settings=getattr(profile, "llm", None),
+    )
+
+    records = []
+    artifacts_dir = handle.artifacts_dir
+    if not artifacts_dir.exists():
+        return records
+
+    # Walk suite subdirectories under artifacts_dir
+    for suite_dir in sorted(artifacts_dir.iterdir()):
+        if not suite_dir.is_dir():
+            continue
+        suite_name = suite_dir.name
+
+        # Find all JUnit XML files under this suite
+        for xml_path in sorted(suite_dir.rglob("*.xml")):
+            cases = parse_junit_xml(xml_path)
+            for case in cases:
+                if case.status not in ("failed", "error"):
+                    continue
+                diag = diagnostics_engine.analyze_failure(case)
+                records.append({
+                    "test_name": case.name,
+                    "suite": suite_name,
+                    "category": diag.category,
+                    "root_cause": diag.root_cause,
+                    "confidence": diag.confidence,
+                    "suggestion": diag.suggestion,
+                    "error_message": case.error_message,
+                    "route": getattr(case, "route", None),
+                })
+
+    return records
 
 
 def register(app: typer.Typer) -> None:
@@ -584,3 +748,4 @@ def register(app: typer.Typer) -> None:
     app.command("a11y-run")(a11y_run)
     app.command("a11y-from-sitemap")(a11y_from_sitemap)
     app.command("run-all")(run_all)
+    app.command("submit-bug")(submit_bug)
