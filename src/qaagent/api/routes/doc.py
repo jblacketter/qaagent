@@ -8,9 +8,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from qaagent.doc.generator import load_documentation, save_documentation, generate_documentation
-from qaagent.doc.markdown_export import render_markdown
-from qaagent.doc.models import (
+from qa_docgen.generator import load_documentation, save_documentation, generate_documentation
+from qa_docgen.markdown_export import render_markdown
+from qa_docgen.models import (
     AppDocumentation,
     ArchitectureEdge,
     ArchitectureNode,

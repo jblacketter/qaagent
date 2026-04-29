@@ -231,7 +231,7 @@ def _parse_sections(markdown: str) -> list:
     Resilient: if there are no ## headings, returns a single section
     with title "Documentation" containing the full text.
     """
-    from qaagent.doc.models import DocSection
+    from qa_docgen.models import DocSection
 
     if not markdown.strip():
         return []
@@ -282,8 +282,8 @@ def analyze_with_agent(
     # Load documentation
     from pathlib import Path
     from qaagent.api.routes.repositories import repositories
-    from qaagent.doc.generator import load_documentation, save_documentation
-    from qaagent.doc.models import AgentAnalysis
+    from qa_docgen.generator import load_documentation, save_documentation
+    from qa_docgen.models import AgentAnalysis
 
     repo = repositories[rid]
     project_root = Path(repo.path)

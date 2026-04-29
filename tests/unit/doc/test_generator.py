@@ -153,7 +153,7 @@ class TestGenerateDocumentation:
         assert "Redis" in int_names
         assert "Stripe" in int_names
 
-    @patch("qaagent.doc.generator.discover_routes")
+    @patch("qa_docgen.generator.discover_routes")
     def test_discovers_routes_when_not_provided(self, mock_discover):
         mock_discover.return_value = _make_routes()
         doc = generate_documentation(

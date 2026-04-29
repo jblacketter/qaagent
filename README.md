@@ -2,6 +2,34 @@
 
 A Python QA automation framework that discovers API routes, assesses risks, generates runnable test suites, orchestrates test execution, and produces reports. Exposes tooling via CLI (Typer) and MCP (Model Context Protocol). Local-first, works on macOS (including Apple Silicon) and Windows.
 
+> **Note (2026-04-24):** The MCP-server surface has moved to the sibling package [`qa-mcp/`](../qa-mcp/) (suite-roadmap Phase 2). `qaagent.mcp_server` is retained as a thin shim, so `python -m qaagent.mcp_server` and the `qaagent-mcp` console script continue to work — both now emit a `DeprecationWarning` pointing at `qa_mcp`. In a fresh clone, install `qa-mcp` **before** installing qaagent's `[mcp]` extra (until `qa-mcp` lands on PyPI):
+>
+> ```bash
+> pip install -e ../qa-mcp
+> pip install -e .[mcp]
+> ```
+>
+> New configurations should depend on `qa-mcp` directly and invoke `qa-mcp` or `python -m qa_mcp`.
+
+> **And as of Phase 3 (same date):** The browser recorder (`qaagent/recording/`) and live-DOM analyzer (`qaagent/analyzers/dom_analyzer.py`) have moved to the sibling package [`qa-recorder/`](../qa-recorder/). qaagent retains thin shims at `qaagent.recording.*` and `qaagent.analyzers.dom_analyzer` so existing code and tests continue to work (with a `DeprecationWarning` pointing at `qa_recorder`). Unlike qa-mcp, `qa-recorder` is a **base dependency** of qaagent (not an optional extra), because qaagent's CLI imports the recorder/DOM surface eagerly at startup. In a fresh clone, install qa-recorder first:
+>
+> ```bash
+> pip install -e ../qa-recorder
+> pip install -e .           # base qaagent install (or any extras)
+> playwright install chromium
+> ```
+>
+> New code should depend on `qa-recorder` directly and import from `qa_recorder` / `qa_recorder.recording` rather than through the qaagent shims.
+
+> **And as of Phase 6 (2026-04-29):** The application-documentation generator (`qaagent/doc/`) has moved to the sibling package [`qa-docgen/`](../qa-docgen/). qaagent retains thin shims at `qaagent.doc.*` so existing code and tests continue to work (with a single `DeprecationWarning` pointing at `qa_docgen`). Unlike `qa-recorder` (base dep), `qa-docgen` is an **`[api]`-extra** dependency — it's pulled in only when you install `qaagent[api]`, since `api/routes/doc.py` is the eager consumer at startup. In a fresh clone:
+>
+> ```bash
+> pip install -e ../qa-docgen
+> pip install -e .[api]       # brings in fastapi/uvicorn + qa-docgen
+> ```
+>
+> Plain `pip install -e .` (no `[api]`) does NOT require qa-docgen — qaagent's CLI works without it because all qaagent.doc.* lookups are lazy on the CLI path. New code should depend on `qa-docgen` directly and import from `qa_docgen` rather than through the qaagent shims.
+
 ![QA Agent Dashboard](docs/qaagent.png)
 
 ## Features
@@ -247,7 +275,7 @@ qaagent open-report --path reports/findings.html
 
 ```bash
 # Start the web UI (serves React dashboard + API + WebSocket)
-qaagent ui --port 8080
+qaagent web-ui --port 8080
 
 # Or run the standalone REST API only (for headless/CI use)
 qaagent api --port 8000

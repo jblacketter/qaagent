@@ -25,7 +25,7 @@ from qaagent.doc.models import (
 # load_active_profile is lazily imported inside functions, so patch at source.
 _PATCH_LOAD_DOC = "qaagent.api.routes.doc.load_documentation"
 _PATCH_LOAD_PROFILE = "qaagent.config.load_active_profile"
-_PATCH_DISCOVER = "qaagent.doc.generator.discover_routes"
+_PATCH_DISCOVER = "qa_docgen.generator.discover_routes"
 _PATCH_SAVE_DOC = "qaagent.api.routes.doc.save_documentation"
 
 

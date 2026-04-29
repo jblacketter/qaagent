@@ -23,8 +23,8 @@ runner = CliRunner()
 # Lazy local imports in doc_cmd.py mean we must patch at the source module,
 # not at qaagent.commands.doc_cmd.
 _PATCH_LOAD_PROFILE = "qaagent.config.load_active_profile"
-_PATCH_DISCOVER_ROUTES = "qaagent.doc.generator.discover_routes"
-_PATCH_LOAD_DOC = "qaagent.doc.generator.load_documentation"
+_PATCH_DISCOVER_ROUTES = "qa_docgen.generator.discover_routes"
+_PATCH_LOAD_DOC = "qa_docgen.generator.load_documentation"
 
 
 def _mock_active_profile(name="testapp", path=None):

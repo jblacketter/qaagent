@@ -240,7 +240,7 @@ def analyze_repository(repo_id: str, request: AnalyzeRequest) -> dict[str, str]:
         try:
             import json as _json
             from qaagent.analyzers.models import Route
-            from qaagent.doc.generator import generate_documentation, save_documentation
+            from qa_docgen.generator import generate_documentation, save_documentation
 
             # Load discovered routes from routes.json to reuse them
             discovered_routes = None

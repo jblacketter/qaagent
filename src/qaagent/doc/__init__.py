@@ -1,11 +1,27 @@
-"""App documentation engine.
+"""qaagent.doc — compatibility shim.
 
-Generates living application specs from code analysis, route discovery,
-and integration detection.
+The application-documentation generator was extracted to the sibling
+package `qa_docgen` on 2026-04-29 (Phase 6). This module re-exports the
+public surface so legacy imports (`from qaagent.doc import ...`,
+`from qaagent.doc.<submodule> import ...`) keep working. New code should
+import from `qa_docgen` directly.
 """
 
-from .generator import generate_documentation, save_documentation, load_documentation
-from .models import (
+import warnings
+
+warnings.warn(
+    "qaagent.doc has moved to qa_docgen — import from qa_docgen instead. "
+    "This shim will be removed in a later cleanup phase.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from qa_docgen.generator import (  # noqa: E402, F401
+    generate_documentation,
+    save_documentation,
+    load_documentation,
+)
+from qa_docgen.models import (  # noqa: E402, F401
     AppDocumentation,
     ArchitectureEdge,
     ArchitectureNode,

@@ -307,7 +307,7 @@ class TestAnalyzeEndpoint:
         repositories["empty-repo"] = repo
         db.agent_config_save("empty-repo", "anthropic", "m", "sk-test1234abcd5678")
 
-        with patch("qaagent.doc.generator.load_documentation", return_value=None):
+        with patch("qa_docgen.generator.load_documentation", return_value=None):
             response = client.post("/api/agent/analyze", params={"repo_id": "empty-repo"})
         assert response.status_code == 404
         assert "No documentation found" in response.json()["detail"]
@@ -477,6 +477,93 @@ class TestEnvVarFallback:
 # ---------------------------------------------------------------------------
 # Backward compatibility
 # ---------------------------------------------------------------------------
+
+
+class TestPerformanceFocusAnalysis:
+    def test_focus_performance_uses_performance_prompt(self, client: TestClient, sample_repo: Repository):
+        """POST /api/agent/analyze with focus=performance uses performance system prompt."""
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
+
+        mock_response = MagicMock()
+        mock_response.content = "## Performance Overview\n\nApp has issues."
+        mock_response.model = "claude-sonnet-4-5-20250929"
+        mock_response.usage = {"prompt_tokens": 300, "completion_tokens": 100, "total_tokens": 400}
+
+        with patch("qaagent.llm.LLMClient") as MockClient:
+            MockClient.return_value.chat.return_value = mock_response
+            response = client.post(
+                "/api/agent/analyze",
+                params={"repo_id": "test-repo"},
+                json={"focus": "performance"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == "## Performance Overview\n\nApp has issues."
+
+        # Verify the system prompt was performance-focused
+        call_args = MockClient.return_value.chat.call_args
+        messages = call_args[0][0]
+        system_msg = messages[0].content
+        assert "performance engineer" in system_msg.lower()
+        assert "Pagination Assessment" in system_msg
+
+    def test_focus_null_uses_general_prompt(self, client: TestClient, sample_repo: Repository):
+        """POST /api/agent/analyze with focus=null uses the general prompt."""
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
+
+        mock_response = MagicMock()
+        mock_response.content = "## Product Overview\n\nGeneral docs."
+        mock_response.model = "claude-sonnet-4-5-20250929"
+        mock_response.usage = {"prompt_tokens": 300, "completion_tokens": 100, "total_tokens": 400}
+
+        with patch("qaagent.llm.LLMClient") as MockClient:
+            MockClient.return_value.chat.return_value = mock_response
+            response = client.post(
+                "/api/agent/analyze",
+                params={"repo_id": "test-repo"},
+                json={"focus": None},
+            )
+
+        assert response.status_code == 200
+        call_args = MockClient.return_value.chat.call_args
+        messages = call_args[0][0]
+        system_msg = messages[0].content
+        assert "product documentation writer" in system_msg.lower()
+
+    def test_focus_performance_includes_route_context(self, client: TestClient, sample_repo: Repository, tmp_path: Path):
+        """Performance focus enriches the user prompt with PERF rule findings."""
+        import json
+
+        db.agent_config_save("test-repo", "anthropic", "claude-sonnet-4-5-20250929", "sk-test1234abcd5678")
+
+        # Write routes.json to the project root
+        routes = [
+            {"path": "/items", "method": "GET", "auth_required": False,
+             "tags": [], "params": {}, "responses": {}},
+        ]
+        (tmp_path / "routes.json").write_text(json.dumps(routes), encoding="utf-8")
+
+        mock_response = MagicMock()
+        mock_response.content = "## Performance Overview\n\nMissing pagination."
+        mock_response.model = "claude-sonnet-4-5-20250929"
+        mock_response.usage = {"prompt_tokens": 300, "completion_tokens": 100, "total_tokens": 400}
+
+        with patch("qaagent.llm.LLMClient") as MockClient:
+            MockClient.return_value.chat.return_value = mock_response
+            response = client.post(
+                "/api/agent/analyze",
+                params={"repo_id": "test-repo"},
+                json={"focus": "performance"},
+            )
+
+        assert response.status_code == 200
+        # Verify user prompt included performance context
+        call_args = MockClient.return_value.chat.call_args
+        messages = call_args[0][0]
+        user_msg = messages[1].content
+        assert "PERF-001" in user_msg
+        assert "Performance Risk Scan" in user_msg
 
 
 class TestBackwardCompatibility:

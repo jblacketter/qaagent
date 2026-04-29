@@ -21,7 +21,7 @@ def doc_generate(
 ):
     """Generate or regenerate application documentation."""
     from qaagent.config import load_active_profile
-    from qaagent.doc.generator import generate_documentation, save_documentation
+    from qa_docgen.generator import generate_documentation, save_documentation
 
     doc_settings = None
     openapi_path = None
@@ -67,7 +67,7 @@ def doc_show(
 ):
     """Display documentation in the terminal."""
     from qaagent.config import load_active_profile
-    from qaagent.doc.generator import load_documentation
+    from qa_docgen.generator import load_documentation
 
     try:
         active_entry, _ = load_active_profile()
@@ -118,8 +118,8 @@ def doc_export(
 ):
     """Export documentation to a file."""
     from qaagent.config import load_active_profile
-    from qaagent.doc.generator import load_documentation
-    from qaagent.doc.markdown_export import render_markdown
+    from qa_docgen.generator import load_documentation
+    from qa_docgen.markdown_export import render_markdown
 
     try:
         active_entry, _ = load_active_profile()
@@ -157,8 +157,8 @@ def doc_cujs(
     import json
 
     from qaagent.config import load_active_profile
-    from qaagent.doc.generator import load_documentation
-    from qaagent.doc.cuj_discoverer import discover_cujs, to_cuj_config
+    from qa_docgen.generator import load_documentation
+    from qa_docgen.cuj_discoverer import discover_cujs, to_cuj_config
 
     try:
         active_entry, _ = load_active_profile()
